@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI对话测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .chat-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .messages {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #fafafa;
+        }
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .user-message {
+            background: #007bff;
+            color: white;
+            text-align: right;
+        }
+        .ai-message {
+            background: #e9ecef;
+            color: #333;
+        }
+        .input-area {
+            display: flex;
+            gap: 10px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .typing {
+            font-style: italic;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <h1>🤖 AI导师工具 - 对话测试</h1>
+        
+        <div id="status" class="status">正在连接...</div>
+        
+        <div id="messages" class="messages">
+            <div class="message ai-message">
+                <strong>AI客户:</strong> 您好！我是李先生，一位金融分析师。我最近在考虑购买保时捷Taycan J2，听说这款车的性能很不错。
+            </div>
+        </div>
+        
+        <div class="input-area">
+            <input type="text" id="messageInput" placeholder="输入您的回复..." disabled>
+            <button id="sendButton" onclick="sendMessage()" disabled>发送</button>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <h3>测试说明：</h3>
+            <ul>
+                <li>这是一个简化的AI对话测试页面</li>
+                <li>直接调用后端API进行AI对话</li>
+                <li>测试阿里云通义千问API集成</li>
+                <li>验证客户角色扮演功能</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'http://localhost:5000';
+        let isLoading = false;
+        
+        // 测试配置
+        const testTaskConfig = {
+            taskGoal: '991-2产品介绍',
+            methodology: 'FAB产品介绍技巧',
+            customerPersonality: ['理性', '数据导向'],
+            customerProfession: '金融分析师',
+            customerCommunication: 'D控制型',
+            customerHobbies: ['高尔夫', '旅游'],
+            customerGender: '男',
+            customerAge: '30-40',
+            currentVehicle: '无',
+            interestedVehicle: 'Taycan J2',
+            customerFocus: ['动力', '智能化', '残值'],
+            competitorCurrent: 'BMW X5',
+            competitorInterested: 'SU 7',
+            competitorFocus: ['外观', '智能化'],
+            negotiationStage: '产品介绍',
+            transactionConcerns: ['价格优惠', '残值']
+        };
+
+        const testAiPrompt = `
+# AI客户角色设定
+
+## 任务目标
+991-2产品介绍
+
+## 销售方法论
+FAB产品介绍技巧
+
+## 客户画像
+- **性格特征**: 理性、数据导向
+- **职业背景**: 金融分析师
+- **沟通方式**: D控制型
+- **兴趣爱好**: 高尔夫、旅游
+- **性别年龄**: 男 30-40岁
+
+## 本品维度
+- **现驾车型**: 无
+- **意向车型**: Taycan J2
+- **关注重点**: 动力、智能化、残值
+
+## 竞品维度
+- **现驾车型**: BMW X5
+- **意向车型**: SU 7
+- **关注重点**: 外观、智能化
+
+## 交易相关
+- **洽谈环节**: 产品介绍
+- **交易关注点**: 价格优惠、残值
+
+请根据以上设定扮演一位真实的客户，与销售顾问进行自然对话。
+        `;
+
+        let conversationHistory = [
+            {
+                role: 'ai',
+                content: '您好！我是李先生，一位金融分析师。我最近在考虑购买保时捷Taycan J2，听说这款车的性能很不错。'
+            }
+        ];
+
+        // 初始化
+        async function init() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/health`);
+                if (response.ok) {
+                    updateStatus('✅ 后端连接成功！可以开始对话', 'success');
+                    enableInput();
+                } else {
+                    updateStatus('❌ 后端连接失败', 'error');
+                }
+            } catch (error) {
+                updateStatus('❌ 无法连接到后端服务，请确保后端已启动', 'error');
+            }
+        }
+
+        function updateStatus(message, type = '') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+
+        function enableInput() {
+            document.getElementById('messageInput').disabled = false;
+            document.getElementById('sendButton').disabled = false;
+            document.getElementById('messageInput').focus();
+        }
+
+        function addMessage(content, isUser = false) {
+            const messagesEl = document.getElementById('messages');
+            const messageEl = document.createElement('div');
+            messageEl.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
+            messageEl.innerHTML = `<strong>${isUser ? '销售顾问' : 'AI客户'}:</strong> ${content}`;
+            messagesEl.appendChild(messageEl);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function showTyping() {
+            const messagesEl = document.getElementById('messages');
+            const typingEl = document.createElement('div');
+            typingEl.className = 'message ai-message typing';
+            typingEl.id = 'typing-indicator';
+            typingEl.innerHTML = '<strong>AI客户:</strong> 正在思考...';
+            messagesEl.appendChild(typingEl);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function hideTyping() {
+            const typingEl = document.getElementById('typing-indicator');
+            if (typingEl) {
+                typingEl.remove();
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message || isLoading) return;
+            
+            isLoading = true;
+            input.value = '';
+            input.disabled = true;
+            document.getElementById('sendButton').disabled = true;
+            
+            // 添加用户消息
+            addMessage(message, true);
+            conversationHistory.push({
+                role: 'user',
+                content: message
+            });
+            
+            // 显示正在输入
+            showTyping();
+            updateStatus('🤖 AI正在生成回复...', '');
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/ai/generate-response`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        taskConfig: testTaskConfig,
+                        aiPrompt: testAiPrompt,
+                        conversationHistory: conversationHistory
+                    })
+                });
+
+                hideTyping();
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        addMessage(data.response);
+                        conversationHistory.push({
+                            role: 'ai',
+                            content: data.response
+                        });
+                        updateStatus('✅ 对话正常进行中', 'success');
+                    } else {
+                        addMessage('抱歉，我遇到了一些问题，请稍后再试。');
+                        updateStatus('❌ AI响应失败', 'error');
+                    }
+                } else {
+                    addMessage('抱歉，服务暂时不可用，请稍后再试。');
+                    updateStatus('❌ 服务器错误', 'error');
+                }
+            } catch (error) {
+                hideTyping();
+                addMessage('抱歉，网络连接出现问题，请检查网络后重试。');
+                updateStatus('❌ 网络错误', 'error');
+                console.error('发送消息失败:', error);
+            } finally {
+                isLoading = false;
+                input.disabled = false;
+                document.getElementById('sendButton').disabled = false;
+                input.focus();
+            }
+        }
+
+        // 回车发送
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('messageInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !isLoading) {
+                    sendMessage();
+                }
+            });
+            init();
+        });
+    </script>
+</body>
+</html>
