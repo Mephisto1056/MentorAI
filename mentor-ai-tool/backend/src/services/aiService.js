@@ -28,36 +28,105 @@ class AIService {
   }
 
   /**
-   * 生成AI客户角色prompt
+   * 生成AI客户角色prompt - 支持四维度训练重点
    */
-  generateCustomerPrompt(taskTemplate) {
-    const { customerDimensions, productDimensions, competitorDimensions, transactionDimensions } = taskTemplate;
+  generateCustomerPrompt(taskConfig) {
+    // 兼容新旧格式
+    const config = taskConfig.customerPersonality ? taskConfig : this.convertLegacyFormat(taskConfig);
     
+    // 基础角色设定
     let prompt = `你是一个汽车销售场景中的模拟客户，请根据以下设定进行角色扮演：
 
+## 任务目标
+${config.taskGoal || '产品咨询'}
+
+## 销售方法论
+${config.methodology || '常规销售'}
+
 ## 客户背景设定
-- 性格特征: ${customerDimensions?.personality || '理性客观'}
-- 职业背景: ${customerDimensions?.profession || '普通消费者'}
-- 沟通方式: ${customerDimensions?.communicationStyle || '直接明了'}
-- 兴趣爱好: ${customerDimensions?.hobbies || '无特殊爱好'}
-- 年龄性别: ${customerDimensions?.age || '30-40岁'} ${customerDimensions?.gender || ''}
+- 性格特征: ${config.customerPersonality?.join('、') || '理性客观'}
+- 职业背景: ${config.customerProfession || '普通消费者'}
+- 沟通方式: ${config.customerCommunication || '直接明了'}
+- 兴趣爱好: ${config.customerHobbies?.join('、') || '无特殊爱好'}
+- 年龄性别: ${config.customerGender || ''} ${config.customerAge || '30-40岁'}
 
-## 购车需求
-- 现有车型: ${productDimensions?.currentVehicle || '无'}
-- 意向车型: ${productDimensions?.interestedVehicle || '待定'}
-- 关注重点: ${productDimensions?.focusPoints?.join('、') || '价格和性能'}
+## 本品维度
+- 现驾车型: ${config.currentVehicle || '无'}
+- 意向车型: ${config.interestedVehicle || '待定'}
+- 关注重点: ${config.customerFocus?.join('、') || '价格和性能'}
 
-## 竞品考虑
-- 对比车型: ${competitorDimensions?.competitorVehicles?.join('、') || '无'}
-- 竞品关注点: ${competitorDimensions?.focusPoints?.join('、') || '价格对比'}
+## 竞品维度
+- 现驾车型: ${config.competitorCurrent || '无'}
+- 意向车型: ${config.competitorInterested || '无'}
+- 关注重点: ${config.competitorFocus?.join('、') || '价格对比'}
 
-## 交易阶段
-- 当前阶段: ${transactionDimensions?.stage || '初步了解'}
-- 主要关注: ${transactionDimensions?.concerns?.join('、') || '价格和服务'}
+## 交易相关
+- 洽谈环节: ${config.negotiationStage || '初步了解'}
+- 交易关注点: ${config.transactionConcerns?.join('、') || '价格和服务'}
 
 请保持角色一致性，根据设定的性格和背景进行自然对话。不要透露你是AI，要像真实客户一样提问和回应。`;
 
+    // 根据训练重点添加特殊指令
+    if (config.trainingFocus && config.trainingFocus.length > 0) {
+      prompt += `\n\n## 训练重点行为指导\n本次对话重点训练：${config.trainingFocus.join('、')}\n`;
+      
+      if (config.trainingFocus.includes('沟通维度')) {
+        prompt += `\n### 沟通维度训练
+- 严格按照你的沟通方式特点进行对话（${config.customerCommunication}）
+- 测试销售顾问是否能识别并适应你的沟通风格
+- 如果销售顾问沟通方式不匹配，表现出不适或困惑`;
+      }
+      
+      if (config.trainingFocus.includes('本品维度')) {
+        prompt += `\n### 本品维度训练
+- 重点询问产品的具体配置、功能、优势
+- 测试销售顾问的产品知识深度
+- 对产品介绍的准确性和专业性提出质疑`;
+      }
+      
+      if (config.trainingFocus.includes('竞品维度')) {
+        prompt += `\n### 竞品维度训练
+- 主动提及竞品对比，询问差异化优势
+- 测试销售顾问对竞品的了解程度
+- 挑战销售顾问进行客观的产品对比分析`;
+      }
+      
+      if (config.trainingFocus.includes('客户信息获取维度')) {
+        prompt += `\n### 客户信息获取维度训练
+- 适度隐藏个人信息，不主动透露需求
+- 测试销售顾问的信息挖掘和提问技巧
+- 只有在销售顾问问对问题时才逐步透露信息`;
+      }
+    }
+
     return prompt;
+  }
+
+  /**
+   * 转换旧格式配置为新格式
+   */
+  convertLegacyFormat(taskTemplate) {
+    const { customerDimensions, productDimensions, competitorDimensions, transactionDimensions } = taskTemplate;
+    
+    return {
+      taskGoal: taskTemplate.taskGoal || '产品咨询',
+      methodology: taskTemplate.methodology || '常规销售',
+      trainingFocus: taskTemplate.trainingFocus || [],
+      customerPersonality: customerDimensions?.personality ? [customerDimensions.personality] : ['理性'],
+      customerProfession: customerDimensions?.profession || '普通消费者',
+      customerCommunication: customerDimensions?.communicationStyle || '直接明了',
+      customerHobbies: customerDimensions?.hobbies ? [customerDimensions.hobbies] : [],
+      customerGender: customerDimensions?.gender || '',
+      customerAge: customerDimensions?.age || '30-40岁',
+      currentVehicle: productDimensions?.currentVehicle || '无',
+      interestedVehicle: productDimensions?.interestedVehicle || '待定',
+      customerFocus: productDimensions?.focusPoints || ['价格'],
+      competitorCurrent: competitorDimensions?.competitorVehicles?.[0] || '无',
+      competitorInterested: competitorDimensions?.competitorVehicles?.[1] || '无',
+      competitorFocus: competitorDimensions?.focusPoints || ['价格对比'],
+      negotiationStage: transactionDimensions?.stage || '初步了解',
+      transactionConcerns: transactionDimensions?.concerns || ['价格']
+    };
   }
 
   /**

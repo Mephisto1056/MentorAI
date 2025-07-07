@@ -49,7 +49,7 @@ router.get('/pending', async (req, res, next) => {
 // @access  Private (Mentor/Admin only)
 router.post('/:sessionId', async (req, res, next) => {
   try {
-    const { overallScore, feedback } = req.body;
+    const { overallScore, feedback, detailedScores, evaluationMode = 'simple' } = req.body;
     
     const session = await PracticeSession.findById(req.params.sessionId);
 
@@ -67,13 +67,34 @@ router.post('/:sessionId', async (req, res, next) => {
       });
     }
 
-    session.mentorEvaluation = {
-      overallScore,
+    // 构建导师评估对象
+    const mentorEvaluation = {
       feedback,
       evaluatedBy: req.user.id,
       evaluatedAt: new Date()
     };
 
+    // 根据评估模式处理评分
+    if (evaluationMode === 'detailed' && detailedScores) {
+      // 详细评分模式：使用14个细则评分
+      mentorEvaluation.detailedScores = detailedScores;
+      
+      // 计算各维度平均分
+      const dimensionAverages = calculateDimensionAverages(detailedScores);
+      mentorEvaluation.dimensionAverages = dimensionAverages;
+      
+      // 计算总平均分（所有14个细则的平均）
+      const allScores = Object.values(detailedScores).filter(score => typeof score === 'number');
+      const calculatedOverallScore = Math.round(allScores.reduce((sum, score) => sum + score, 0) / allScores.length);
+      mentorEvaluation.overallScore = calculatedOverallScore;
+      
+      logger.info(`Detailed evaluation calculated: Overall=${calculatedOverallScore}, Dimensions=${JSON.stringify(dimensionAverages)}`);
+    } else {
+      // 简单评分模式：使用总分
+      mentorEvaluation.overallScore = overallScore;
+    }
+
+    session.mentorEvaluation = mentorEvaluation;
     session.status = 'evaluated';
     await session.save();
 
@@ -86,6 +107,25 @@ router.post('/:sessionId', async (req, res, next) => {
     next(error);
   }
 });
+
+// 计算各维度平均分的辅助函数
+function calculateDimensionAverages(detailedScores) {
+  const {
+    criteria1, criteria2, criteria3, criteria4,     // 沟通维度
+    criteria5, criteria6, criteria7,                // 本品维度
+    criteria8, criteria9, criteria10,               // 竞品维度
+    criteria11, criteria12, criteria13,             // 客户信息获取维度
+    criteria14                                      // 方法论匹配度
+  } = detailedScores;
+
+  return {
+    communication: Math.round((criteria1 + criteria2 + criteria3 + criteria4) / 4),
+    ownProduct: Math.round((criteria5 + criteria6 + criteria7) / 3),
+    competitor: Math.round((criteria8 + criteria9 + criteria10) / 3),
+    customerInfo: Math.round((criteria11 + criteria12 + criteria13) / 3),
+    methodology: criteria14
+  };
+}
 
 // @desc    Get evaluation history
 // @route   GET /api/evaluations/history

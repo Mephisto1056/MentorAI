@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function TaskGenerator() {
   const [taskConfig, setTaskConfig] = useState({
     taskGoal: '',
     methodology: '',
+    trainingFocus: [] as string[], // 新增：训练重点
     customerPersonality: [] as string[],
     customerProfession: '',
     customerCommunication: '',
@@ -24,8 +25,98 @@ export default function TaskGenerator() {
   });
 
   const [generatedPrompt, setGeneratedPrompt] = useState('');
+  const [conflictWarnings, setConflictWarnings] = useState<string[]>([]);
+
+  // 冲突检测规则
+  const conflictRules = {
+    taskGoalMethodology: {
+      '小米SU7竞品对比': ['RACE竞品对比介绍'],
+      '991-2产品介绍': ['FAB产品介绍技巧'],
+      '客户需求挖掘': ['SPIN销售法'],
+      '金融方案销售': ['顾问式销售'],
+      '试驾邀约': ['顾问式销售', 'SPIN销售法']
+    },
+    communicationPersonality: {
+      'D控制型': ['强势', '主导权', '独立'],
+      'I影响型': ['积极表达', '相信朋友', '喜欢案例'],
+      'C遵循型': ['服从权威', '数据导向', '理性'],
+      'S稳定型': ['犹豫', '隐藏需求']
+    },
+    vehicleConflicts: {
+      currentVsInterested: true, // 现驾车型不能与意向车型相同
+      competitorCurrentVsInterested: true // 竞品现驾不能与竞品意向相同
+    }
+  };
+
+  // 检测冲突
+  const detectConflicts = (config: typeof taskConfig) => {
+    const warnings: string[] = [];
+
+    // 任务目标与方法论匹配检查
+    if (config.taskGoal && config.methodology) {
+      const recommendedMethods = conflictRules.taskGoalMethodology[config.taskGoal as keyof typeof conflictRules.taskGoalMethodology];
+      if (recommendedMethods && !recommendedMethods.includes(config.methodology)) {
+        warnings.push(`任务目标"${config.taskGoal}"建议使用方法论：${recommendedMethods.join('或')}`);
+      }
+    }
+
+    // 沟通方式与性格特征匹配检查
+    if (config.customerCommunication && config.customerPersonality.length > 0) {
+      const recommendedTraits = conflictRules.communicationPersonality[config.customerCommunication as keyof typeof conflictRules.communicationPersonality];
+      if (recommendedTraits) {
+        const hasMatchingTrait = config.customerPersonality.some(trait => recommendedTraits.includes(trait));
+        if (!hasMatchingTrait) {
+          warnings.push(`沟通方式"${config.customerCommunication}"建议搭配性格特征：${recommendedTraits.join('、')}`);
+        }
+      }
+    }
+
+    // 车型冲突检查
+    if (config.currentVehicle && config.interestedVehicle && config.currentVehicle === config.interestedVehicle) {
+      warnings.push('现驾车型与意向车型不能相同');
+    }
+
+    if (config.competitorCurrent && config.competitorInterested && config.competitorCurrent === config.competitorInterested) {
+      warnings.push('竞品现驾车型与竞品意向车型不能相同');
+    }
+
+    return warnings;
+  };
+
+  // 获取禁用选项
+  const getDisabledOptions = (field: string, value: string) => {
+    const config = taskConfig;
+    
+    switch (field) {
+      case 'methodology':
+        if (config.taskGoal) {
+          const recommended = conflictRules.taskGoalMethodology[config.taskGoal as keyof typeof conflictRules.taskGoalMethodology];
+          return recommended ? !recommended.includes(value) : false;
+        }
+        return false;
+      
+      case 'interestedVehicle':
+        return config.currentVehicle === value;
+      
+      case 'competitorInterested':
+        return config.competitorCurrent === value;
+      
+      default:
+        return false;
+    }
+  };
+
+  // 使用useEffect监听配置变化，实时检测冲突
+  useEffect(() => {
+    const warnings = detectConflicts(taskConfig);
+    setConflictWarnings(warnings);
+  }, [taskConfig]);
 
   const generatePrompt = () => {
+    const trainingFocusText = taskConfig.trainingFocus.length > 0 
+      ? `\n## 训练重点\n本次对话将重点训练以下维度：${taskConfig.trainingFocus.join('、')}\n请在对话中特别关注这些方面的表现。`
+      : '';
+
     const prompt = `
 # AI客户角色设定
 
@@ -33,7 +124,7 @@ export default function TaskGenerator() {
 ${taskConfig.taskGoal || '未设置'}
 
 ## 销售方法论
-${taskConfig.methodology || '未设置'}
+${taskConfig.methodology || '未设置'}${trainingFocusText}
 
 ## 客户画像
 - **性格特征**: ${taskConfig.customerPersonality.join('、') || '未设置'}
@@ -57,6 +148,9 @@ ${taskConfig.methodology || '未设置'}
 - **交易关注点**: ${taskConfig.transactionConcerns.join('、') || '未设置'}
 
 请根据以上设定扮演一位真实的客户，与销售顾问进行自然对话。
+${taskConfig.trainingFocus.length > 0 ? `
+特别注意：
+${taskConfig.trainingFocus.includes('沟通维度') ? '- 根据你的沟通方式特点进行对话，测试销售顾问的沟通适应能力\n' : ''}${taskConfig.trainingFocus.includes('本品维度') ? '- 重点询问产品相关问题，测试销售顾问的产品知识和优势展示能力\n' : ''}${taskConfig.trainingFocus.includes('竞品维度') ? '- 主动提及竞品对比，测试销售顾问的竞品分析和差异化说明能力\n' : ''}${taskConfig.trainingFocus.includes('客户信息获取维度') ? '- 适度隐藏个人信息，测试销售顾问的信息挖掘和需求识别能力\n' : ''}` : ''}
     `;
     setGeneratedPrompt(prompt);
   };
@@ -86,9 +180,12 @@ ${taskConfig.methodology || '未设置'}
       return shuffled.slice(0, count);
     };
 
+    const trainingFocuses = ['沟通维度', '本品维度', '竞品维度', '客户信息获取维度'];
+
     setTaskConfig({
       taskGoal: randomChoice(taskGoals),
       methodology: randomChoice(methodologies),
+      trainingFocus: randomChoices(trainingFocuses, Math.floor(Math.random() * 2) + 1),
       customerPersonality: randomChoices(personalities, Math.floor(Math.random() * 4) + 1),
       customerProfession: randomChoice(professions),
       customerCommunication: randomChoice(communications),
@@ -135,7 +232,7 @@ ${taskConfig.methodology || '未设置'}
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <Link href="/" className="text-2xl font-bold text-gray-900 hover:text-blue-600">
-                AI导师工具
+                AI Mentor工具
               </Link>
               <span className="ml-2 text-sm text-gray-500">任务生成界面</span>
             </div>
@@ -205,12 +302,68 @@ ${taskConfig.methodology || '未设置'}
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                 >
                   <option value="">请选择方法论</option>
-                  <option value="FAB产品介绍技巧">FAB产品介绍技巧</option>
-                  <option value="RACE竞品对比介绍">RACE竞品对比介绍</option>
-                  <option value="SPIN销售法">SPIN销售法</option>
-                  <option value="顾问式销售">顾问式销售</option>
+                  {['FAB产品介绍技巧', 'RACE竞品对比介绍', 'SPIN销售法', '顾问式销售'].map(method => (
+                    <option 
+                      key={method} 
+                      value={method}
+                      disabled={getDisabledOptions('methodology', method)}
+                      className={getDisabledOptions('methodology', method) ? 'text-gray-400' : ''}
+                    >
+                      {method}
+                    </option>
+                  ))}
                 </select>
               </div>
+
+              {/* 训练重点选择 */}
+              <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+                <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                  <span className="mr-2">🎯</span>
+                  训练重点维度
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { key: '沟通维度', desc: '沟通方式识别、匹配、引导能力' },
+                    { key: '本品维度', desc: '产品知识、优势展示、需求匹配' },
+                    { key: '竞品维度', desc: '竞品分析、差异化对比能力' },
+                    { key: '客户信息获取维度', desc: '信息挖掘、性格识别能力' }
+                  ].map(focus => (
+                    <label key={focus.key} className="flex items-start p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={taskConfig.trainingFocus.includes(focus.key)}
+                        onChange={() => toggleArrayValue('trainingFocus', focus.key)}
+                        className="mr-3 mt-1"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-gray-900">{focus.key}</span>
+                        <p className="text-xs text-gray-500 mt-1">{focus.desc}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* 冲突警告 */}
+              {conflictWarnings.length > 0 && (
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <span className="text-yellow-400">⚠️</span>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-yellow-800">配置建议</h3>
+                      <div className="mt-2 text-sm text-yellow-700">
+                        <ul className="list-disc list-inside space-y-1">
+                          {conflictWarnings.map((warning, index) => (
+                            <li key={index}>{warning}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* 客户维度 */}
               <div className="bg-white rounded-lg shadow p-6">
@@ -490,7 +643,7 @@ ${taskConfig.methodology || '未设置'}
                   href={`/practice-chat${generatedPrompt ? `?config=${encodeURIComponent(JSON.stringify(taskConfig))}&prompt=${encodeURIComponent(generatedPrompt)}` : ''}`}
                   className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 inline-block text-center"
                 >
-                  开始对话练习
+                  发送邮件至邮箱
                 </Link>
               </div>
             </div>

@@ -8,7 +8,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">AI导师工具</h1>
+              <h1 className="text-2xl font-bold text-gray-900">AI Mentor工具</h1>
               <span className="ml-2 text-sm text-gray-500">销售培训平台</span>
             </div>
             <div className="flex items-center space-x-4">
@@ -24,7 +24,7 @@ export default function Home() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">欢迎使用AI导师工具</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">欢迎使用AI Mentor工具</h2>
           <p className="text-lg text-gray-600 mb-8">为保时捷销售团队提供专业的AI驱动培训平台</p>
         </div>
 
@@ -111,14 +111,14 @@ export default function Home() {
               <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl">👨‍🏫</span>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">导师评估界面</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Mentor评估界面</h3>
               <p className="text-gray-600 mb-6">
-                导师查看学员练习记录，结合AI评估进行专业指导和反馈
+                Mentor查看学员练习记录，结合AI评估进行专业指导和反馈
               </p>
               <div className="space-y-2 text-sm text-gray-500 mb-6">
                 <div>• 待评估会话列表</div>
                 <div>• AI评估结果参考</div>
-                <div>• 导师专业评价</div>
+                <div>• Mentor专业评价</div>
                 <div>• 双重反馈机制</div>
               </div>
               <a

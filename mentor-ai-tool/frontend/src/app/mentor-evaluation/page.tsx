@@ -37,6 +37,46 @@ interface SessionDetail {
   };
 }
 
+interface DetailedScores {
+  criteria1: number;  // 匹配客户的沟通方式
+  criteria2: number;  // 识别客户的沟通方式
+  criteria3: number;  // 引导沟通的方向
+  criteria4: number;  // 清晰的表达自己的观点
+  criteria5: number;  // 本品产品知识正确
+  criteria6: number;  // 突出本产品的配置或者功能优势
+  criteria7: number;  // 清晰的确定客户的目标车型
+  criteria8: number;  // 了解竞品的相关知识
+  criteria9: number;  // 可以找出本品和竞品间的差异
+  criteria10: number; // 可以客观的进行竞品和本品的对比
+  criteria11: number; // 了解了客户的兴趣爱好
+  criteria12: number; // 了解了客户的职业背景
+  criteria13: number; // 可以匹配客户的性格特征，进行沟通
+  criteria14: number; // 可以在场景中，清晰运用预设的方法论
+}
+
+// 14个评判标准的定义
+const EVALUATION_CRITERIA = [
+  // 沟通维度
+  { id: 'criteria1', dimension: '沟通维度', name: '匹配客户的沟通方式', icon: '🗣️' },
+  { id: 'criteria2', dimension: '沟通维度', name: '识别客户的沟通方式', icon: '🗣️' },
+  { id: 'criteria3', dimension: '沟通维度', name: '引导沟通的方向', icon: '🗣️' },
+  { id: 'criteria4', dimension: '沟通维度', name: '清晰的表达自己的观点', icon: '🗣️' },
+  // 本品维度
+  { id: 'criteria5', dimension: '本品维度', name: '本品产品知识正确', icon: '🚗' },
+  { id: 'criteria6', dimension: '本品维度', name: '突出本产品的配置或者功能优势', icon: '🚗' },
+  { id: 'criteria7', dimension: '本品维度', name: '清晰的确定客户的目标车型', icon: '🚗' },
+  // 竞品维度
+  { id: 'criteria8', dimension: '竞品维度', name: '了解竞品的相关知识', icon: '🏁' },
+  { id: 'criteria9', dimension: '竞品维度', name: '可以找出本品和竞品间的差异', icon: '🏁' },
+  { id: 'criteria10', dimension: '竞品维度', name: '可以客观的进行竞品和本品的对比', icon: '🏁' },
+  // 客户信息获取维度
+  { id: 'criteria11', dimension: '客户信息获取维度', name: '了解了客户的兴趣爱好', icon: '👤' },
+  { id: 'criteria12', dimension: '客户信息获取维度', name: '了解了客户的职业背景', icon: '👤' },
+  { id: 'criteria13', dimension: '客户信息获取维度', name: '可以匹配客户的性格特征，进行沟通', icon: '👤' },
+  // 方法论匹配度
+  { id: 'criteria14', dimension: '方法论匹配度', name: '可以在场景中，清晰运用预设的方法论', icon: '📋' }
+];
+
 export default function MentorEvaluation() {
   const [pendingSessions, setPendingSessions] = useState<PendingSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<SessionDetail | null>(null);
@@ -44,10 +84,19 @@ export default function MentorEvaluation() {
   const [evaluating, setEvaluating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // 评估表单状态
-  const [overallScore, setOverallScore] = useState<number>(80);
+  // 只使用详细评估模式
   const [feedback, setFeedback] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'conversation' | 'ai-evaluation'>('conversation');
+  
+  // 详细评估状态
+  const [detailedScores, setDetailedScores] = useState<DetailedScores>({
+    criteria1: 80, criteria2: 80, criteria3: 80, criteria4: 80,
+    criteria5: 80, criteria6: 80, criteria7: 80,
+    criteria8: 80, criteria9: 80, criteria10: 80,
+    criteria11: 80, criteria12: 80, criteria13: 80,
+    criteria14: 80
+  });
+  
+  const [activeTab, setActiveTab] = useState<'conversation' | 'ai-evaluation' | 'criteria-reference'>('conversation');
 
   useEffect(() => {
     fetchPendingSessions();
@@ -79,9 +128,44 @@ export default function MentorEvaluation() {
         const result = await response.json();
         setSelectedSession(result.data);
         setActiveTab('conversation');
-        // 如果有AI评估，设置初始分数为AI评分
-        if (result.data.aiEvaluation?.overallScore) {
-          setOverallScore(result.data.aiEvaluation.overallScore);
+        
+        // 如果有AI评估，设置详细评分的初始值
+        if (result.data.aiEvaluation?.dimensionScores) {
+          const aiScores = result.data.aiEvaluation.dimensionScores;
+          const newDetailedScores = { ...detailedScores };
+          
+          // 根据AI评估的维度分数设置初始值
+          aiScores.forEach((dimension: any) => {
+            const score = dimension.score || 80;
+            switch (dimension.dimension) {
+              case '沟通维度':
+                newDetailedScores.criteria1 = score;
+                newDetailedScores.criteria2 = score;
+                newDetailedScores.criteria3 = score;
+                newDetailedScores.criteria4 = score;
+                break;
+              case '本品维度':
+                newDetailedScores.criteria5 = score;
+                newDetailedScores.criteria6 = score;
+                newDetailedScores.criteria7 = score;
+                break;
+              case '竞品维度':
+                newDetailedScores.criteria8 = score;
+                newDetailedScores.criteria9 = score;
+                newDetailedScores.criteria10 = score;
+                break;
+              case '客户信息获取维度':
+                newDetailedScores.criteria11 = score;
+                newDetailedScores.criteria12 = score;
+                newDetailedScores.criteria13 = score;
+                break;
+              case '方法论匹配度':
+                newDetailedScores.criteria14 = score;
+                break;
+            }
+          });
+          
+          setDetailedScores(newDetailedScores);
         }
       } else {
         setError('获取会话详情失败');
@@ -100,15 +184,18 @@ export default function MentorEvaluation() {
 
     setEvaluating(true);
     try {
+      const requestBody: any = {
+        feedback: feedback.trim(),
+        evaluationMode: 'detailed',
+        detailedScores: detailedScores
+      };
+
       const response = await fetch(`http://localhost:5000/api/evaluations/${selectedSession.sessionId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          overallScore,
-          feedback: feedback.trim()
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (response.ok) {
@@ -118,7 +205,13 @@ export default function MentorEvaluation() {
         // 清空选中的会话
         setSelectedSession(null);
         setFeedback('');
-        setOverallScore(80);
+        setDetailedScores({
+          criteria1: 80, criteria2: 80, criteria3: 80, criteria4: 80,
+          criteria5: 80, criteria6: 80, criteria7: 80,
+          criteria8: 80, criteria9: 80, criteria10: 80,
+          criteria11: 80, criteria12: 80, criteria13: 80,
+          criteria14: 80
+        });
       } else {
         const errorData = await response.json();
         alert('提交失败: ' + (errorData.error || '未知错误'));
@@ -129,6 +222,36 @@ export default function MentorEvaluation() {
     } finally {
       setEvaluating(false);
     }
+  };
+
+  // 计算详细评分的各维度平均分和总分
+  const calculateDetailedAverages = () => {
+    const communication = Math.round((detailedScores.criteria1 + detailedScores.criteria2 + detailedScores.criteria3 + detailedScores.criteria4) / 4);
+    const ownProduct = Math.round((detailedScores.criteria5 + detailedScores.criteria6 + detailedScores.criteria7) / 3);
+    const competitor = Math.round((detailedScores.criteria8 + detailedScores.criteria9 + detailedScores.criteria10) / 3);
+    const customerInfo = Math.round((detailedScores.criteria11 + detailedScores.criteria12 + detailedScores.criteria13) / 3);
+    const methodology = detailedScores.criteria14;
+    
+    const overall = Math.round(Object.values(detailedScores).reduce((sum, score) => sum + score, 0) / 14);
+    
+    return { communication, ownProduct, competitor, customerInfo, methodology, overall };
+  };
+
+  // 更新详细评分
+  const updateDetailedScore = (criteriaId: keyof DetailedScores, score: number) => {
+    setDetailedScores(prev => ({
+      ...prev,
+      [criteriaId]: score
+    }));
+  };
+
+  // 批量设置分数
+  const setBatchScore = (score: number) => {
+    const newScores = { ...detailedScores };
+    Object.keys(newScores).forEach(key => {
+      newScores[key as keyof DetailedScores] = score;
+    });
+    setDetailedScores(newScores);
   };
 
   const getScoreColor = (score: number) => {
@@ -158,6 +281,8 @@ export default function MentorEvaluation() {
     );
   }
 
+  const detailedAverages = calculateDetailedAverages();
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -166,9 +291,9 @@ export default function MentorEvaluation() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <Link href="/" className="text-2xl font-bold text-gray-900 hover:text-blue-600">
-                AI导师工具
+                AI Mentor工具
               </Link>
-              <span className="ml-2 text-sm text-gray-500">导师评估</span>
+              <span className="ml-2 text-sm text-gray-500">Mentor评估</span>
             </div>
             <div className="flex items-center space-x-4">
               <Link href="/dashboard" className="text-sm text-gray-600 hover:text-blue-600">
@@ -186,7 +311,7 @@ export default function MentorEvaluation() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-6">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-900">导师评估中心</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Mentor评估中心</h1>
             <div className="text-sm text-gray-600">
               待评估: {pendingSessions.length} 个会话
             </div>
@@ -225,7 +350,7 @@ export default function MentorEvaluation() {
                               {session.sessionName}
                             </h4>
                             <p className="text-xs text-gray-600 mt-1">
-                              学员: {session.studentId.profile.name}
+                              学员: {session.studentId?.profile?.name || session.studentId?.username || '未知学员'}
                             </p>
                             <p className="text-xs text-gray-500 mt-1">
                               提交: {new Date(session.submittedAt).toLocaleDateString('zh-CN')}
@@ -260,7 +385,7 @@ export default function MentorEvaluation() {
                       <div>
                         <h2 className="text-xl font-bold text-gray-900">{selectedSession.sessionName}</h2>
                         <div className="mt-2 space-y-1 text-sm text-gray-600">
-                          <p>学员: {selectedSession.student.profile.name}</p>
+                          <p>学员: {selectedSession.student?.profile?.name || selectedSession.student?.username || '未知学员'}</p>
                           <p>任务目标: {selectedSession.taskConfig?.taskGoal || '产品介绍'}</p>
                           <p>方法论: {selectedSession.taskConfig?.methodology || 'FAB产品介绍技巧'}</p>
                           <p>客户: {selectedSession.customerProfile?.name} ({selectedSession.customerProfile?.profession})</p>
@@ -303,6 +428,16 @@ export default function MentorEvaluation() {
                             AI评估参考
                           </button>
                         )}
+                        <button
+                          onClick={() => setActiveTab('criteria-reference')}
+                          className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                            activeTab === 'criteria-reference'
+                              ? 'border-blue-500 text-blue-600'
+                              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                          }`}
+                        >
+                          评判标准
+                        </button>
                       </nav>
                     </div>
 
@@ -375,37 +510,161 @@ export default function MentorEvaluation() {
                           )}
                         </div>
                       )}
+
+                      {/* 评判标准参考 */}
+                      {activeTab === 'criteria-reference' && (
+                        <div className="space-y-6">
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <h4 className="text-lg font-medium text-blue-800 mb-3">📊 14个评判标准总览</h4>
+                            <p className="text-sm text-blue-700 mb-4">
+                              以下是完整的评判标准，导师可以根据这些标准对学员的表现进行详细评估。
+                            </p>
+                          </div>
+
+                          {/* 按维度分组显示标准 */}
+                          {['沟通维度', '本品维度', '竞品维度', '客户信息获取维度', '方法论匹配度'].map((dimensionName, dimIndex) => {
+                            const dimensionCriteria = EVALUATION_CRITERIA.filter(c => c.dimension === dimensionName);
+                            const dimensionIcon = dimensionCriteria[0]?.icon || '📋';
+                            
+                            return (
+                              <div key={dimIndex} className="border border-gray-200 rounded-lg p-4">
+                                <h5 className="text-md font-medium text-gray-900 mb-3 flex items-center">
+                                  <span className="mr-2">{dimensionIcon}</span>
+                                  {dimensionName} ({dimensionCriteria.length}个细则)
+                                </h5>
+                                <div className="space-y-2">
+                                  {dimensionCriteria.map((criteria, index) => (
+                                    <div key={criteria.id} className="bg-gray-50 p-3 rounded text-sm">
+                                      <div className="flex items-start">
+                                        <span className="font-medium text-gray-700 mr-2">
+                                          {EVALUATION_CRITERIA.findIndex(c => c.id === criteria.id) + 1}.
+                                        </span>
+                                        <span className="text-gray-800">{criteria.name}</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* 导师评估表单 */}
+                  {/* Mentor评估表单 */}
                   <div className="bg-white rounded-lg shadow p-6">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">导师评估</h3>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Mentor详细评估</h3>
                     
-                    <div className="space-y-4">
-                      {/* 评分 */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          综合评分 (0-100)
-                        </label>
-                        <div className="flex items-center space-x-4">
-                          <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            value={overallScore}
-                            onChange={(e) => setOverallScore(parseInt(e.target.value))}
-                            className="flex-1"
-                          />
-                          <div className="flex items-center space-x-2">
-                            <span className={`text-2xl font-bold ${getScoreColor(overallScore)}`}>
-                              {overallScore}
-                            </span>
-                            <span className="text-sm text-gray-500">
-                              {getScoreLabel(overallScore)}
-                            </span>
+                    <div className="space-y-6">
+                      {/* 评分总览 */}
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <h4 className="text-md font-medium text-gray-900 mb-3">📊 评分总览</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                          <div className="text-center">
+                            <div className={`text-lg font-bold ${getScoreColor(detailedAverages.communication)}`}>
+                              {detailedAverages.communication}
+                            </div>
+                            <div className="text-gray-600">🗣️ 沟通维度</div>
+                          </div>
+                          <div className="text-center">
+                            <div className={`text-lg font-bold ${getScoreColor(detailedAverages.ownProduct)}`}>
+                              {detailedAverages.ownProduct}
+                            </div>
+                            <div className="text-gray-600">🚗 本品维度</div>
+                          </div>
+                          <div className="text-center">
+                            <div className={`text-lg font-bold ${getScoreColor(detailedAverages.competitor)}`}>
+                              {detailedAverages.competitor}
+                            </div>
+                            <div className="text-gray-600">🏁 竞品维度</div>
+                          </div>
+                          <div className="text-center">
+                            <div className={`text-lg font-bold ${getScoreColor(detailedAverages.customerInfo)}`}>
+                              {detailedAverages.customerInfo}
+                            </div>
+                            <div className="text-gray-600">👤 客户信息</div>
+                          </div>
+                          <div className="text-center">
+                            <div className={`text-lg font-bold ${getScoreColor(detailedAverages.methodology)}`}>
+                              {detailedAverages.methodology}
+                            </div>
+                            <div className="text-gray-600">📋 方法论</div>
+                          </div>
+                          <div className="text-center border-l-2 border-blue-500 pl-4">
+                            <div className={`text-xl font-bold ${getScoreColor(detailedAverages.overall)}`}>
+                              {detailedAverages.overall}
+                            </div>
+                            <div className="text-gray-600">💯 总分</div>
                           </div>
                         </div>
+                      </div>
+
+                      {/* 批量操作 */}
+                      <div className="flex items-center space-x-4 text-sm">
+                        <span className="text-gray-600">快速设置:</span>
+                        <button
+                          onClick={() => setBatchScore(90)}
+                          className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200"
+                        >
+                          全部90分
+                        </button>
+                        <button
+                          onClick={() => setBatchScore(80)}
+                          className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                        >
+                          全部80分
+                        </button>
+                        <button
+                          onClick={() => setBatchScore(70)}
+                          className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200"
+                        >
+                          全部70分
+                        </button>
+                      </div>
+
+                      {/* 详细评分表单 */}
+                      <div className="space-y-6">
+                        {['沟通维度', '本品维度', '竞品维度', '客户信息获取维度', '方法论匹配度'].map((dimensionName, dimIndex) => {
+                          const dimensionCriteria = EVALUATION_CRITERIA.filter(c => c.dimension === dimensionName);
+                          const dimensionIcon = dimensionCriteria[0]?.icon || '📋';
+                          
+                          return (
+                            <div key={dimIndex} className="border border-gray-200 rounded-lg p-4">
+                              <h5 className="text-md font-medium text-gray-900 mb-4 flex items-center">
+                                <span className="mr-2">{dimensionIcon}</span>
+                                {dimensionName}
+                              </h5>
+                              <div className="space-y-4">
+                                {dimensionCriteria.map((criteria) => (
+                                  <div key={criteria.id} className="space-y-2">
+                                    <div className="flex justify-between items-center">
+                                      <label className="text-sm font-medium text-gray-700">
+                                        {EVALUATION_CRITERIA.findIndex(c => c.id === criteria.id) + 1}. {criteria.name}
+                                      </label>
+                                      <div className="flex items-center space-x-2">
+                                        <span className={`text-lg font-bold ${getScoreColor(detailedScores[criteria.id as keyof DetailedScores])}`}>
+                                          {detailedScores[criteria.id as keyof DetailedScores]}
+                                        </span>
+                                        <span className="text-xs text-gray-500">
+                                          {getScoreLabel(detailedScores[criteria.id as keyof DetailedScores])}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <input
+                                      type="range"
+                                      min="0"
+                                      max="100"
+                                      value={detailedScores[criteria.id as keyof DetailedScores]}
+                                      onChange={(e) => updateDetailedScore(criteria.id as keyof DetailedScores, parseInt(e.target.value))}
+                                      className="w-full"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
 
                       {/* 反馈 */}
@@ -413,12 +672,96 @@ export default function MentorEvaluation() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           详细反馈 *
                         </label>
+                        
+                        {/* 快捷反馈选项 */}
+                        <div className="mb-3">
+                          <div className="text-xs font-medium text-gray-600 mb-2">快捷反馈模板：</div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {/* 优点模板 */}
+                            <div>
+                              <div className="text-xs text-green-700 font-medium mb-1">✅ 优点模板</div>
+                              <div className="space-y-1">
+                                {[
+                                  "沟通技巧出色，能够很好地识别和匹配客户的沟通方式",
+                                  "产品知识扎实，能够准确介绍车型配置和技术参数",
+                                  "竞品分析到位，客观地进行了产品对比",
+                                  "善于挖掘客户需求，了解客户的兴趣爱好和职业背景",
+                                  "销售方法论运用熟练，FAB技巧使用得当",
+                                  "表达清晰，逻辑性强，能够引导对话方向"
+                                ].map((template, index) => (
+                                  <button
+                                    key={index}
+                                    onClick={() => setFeedback(prev => prev + (prev ? '\n\n' : '') + '✅ ' + template)}
+                                    className="block w-full text-left px-2 py-1 text-xs bg-green-50 hover:bg-green-100 border border-green-200 rounded text-green-800 transition-colors"
+                                  >
+                                    {template}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            
+                            {/* 缺点模板 */}
+                            <div>
+                              <div className="text-xs text-red-700 font-medium mb-1">❌ 需要改进</div>
+                              <div className="space-y-1">
+                                {[
+                                  "需要加强对客户沟通方式的识别和适应能力",
+                                  "产品知识有待提升，特别是技术细节方面",
+                                  "竞品了解不够深入，建议加强竞品学习",
+                                  "客户需求挖掘不够充分，可以更多了解客户背景",
+                                  "销售方法论运用不够熟练，需要多加练习",
+                                  "表达不够清晰，逻辑性有待加强"
+                                ].map((template, index) => (
+                                  <button
+                                    key={index}
+                                    onClick={() => setFeedback(prev => prev + (prev ? '\n\n' : '') + '❌ ' + template)}
+                                    className="block w-full text-left px-2 py-1 text-xs bg-red-50 hover:bg-red-100 border border-red-200 rounded text-red-800 transition-colors"
+                                  >
+                                    {template}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* 综合评价模板 */}
+                          <div className="mt-3">
+                            <div className="text-xs text-blue-700 font-medium mb-1">💡 综合评价模板</div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
+                              {[
+                                "总体表现良好，在沟通和产品介绍方面表现出色，建议继续保持并加强竞品知识学习。",
+                                "本次对话展现了扎实的销售基础，特别是需求挖掘方面做得很好，建议在表达逻辑上进一步优化。",
+                                "沟通技巧有待提升，建议多练习不同类型客户的应对策略，同时加强产品知识学习。",
+                                "整体表现中等，在客户信息获取方面做得不错，建议加强销售方法论的实际运用。"
+                              ].map((template, index) => (
+                                <button
+                                  key={index}
+                                  onClick={() => setFeedback(prev => prev + (prev ? '\n\n' : '') + '💡 ' + template)}
+                                  className="block w-full text-left px-2 py-1 text-xs bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded text-blue-800 transition-colors"
+                                >
+                                  {template}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          {/* 清空按钮 */}
+                          <div className="mt-2 flex justify-end">
+                            <button
+                              onClick={() => setFeedback('')}
+                              className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded text-gray-700 transition-colors"
+                            >
+                              清空反馈
+                            </button>
+                          </div>
+                        </div>
+                        
                         <textarea
                           value={feedback}
                           onChange={(e) => setFeedback(e.target.value)}
-                          rows={6}
+                          rows={8}
                           className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="请提供详细的评估反馈，包括表现优秀的方面和需要改进的地方..."
+                          placeholder="请提供详细的评估反馈，包括表现优秀的方面和需要改进的地方...&#10;&#10;您可以使用上方的快捷模板，点击后会自动添加到此处，然后可以根据实际情况进行修改。"
                         />
                       </div>
 

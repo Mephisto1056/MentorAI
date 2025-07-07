@@ -17,6 +17,12 @@ export default function PracticeChat() {
   const [isTyping, setIsTyping] = useState(false);
   const [sessionStartTime] = useState(new Date());
   const [customerName, setCustomerName] = useState<string>('');
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  
+  // 可展开/收起状态
+  const [isCustomerInfoExpanded, setIsCustomerInfoExpanded] = useState(true);
+  const [isRealTimeTipsExpanded, setIsRealTimeTipsExpanded] = useState(true);
+  const [isEvaluationCriteriaExpanded, setIsEvaluationCriteriaExpanded] = useState(true);
   
   const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -84,10 +90,12 @@ export default function PracticeChat() {
     }
   }, [searchParams]);
 
-  // 自动滚动到底部
+  // 自动滚动到底部 - 只在收到AI回复时滚动
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (shouldAutoScroll) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, shouldAutoScroll]);
 
   const generateInitialMessage = (config: any) => {
     const name = getCustomerName(config);
@@ -217,6 +225,7 @@ export default function PracticeChat() {
       const messageContent = inputMessage;
       setInputMessage('');
       setIsTyping(true);
+      setShouldAutoScroll(false); // 用户发送消息时不自动滚动
       
       // 发送消息到后端
       socketRef.current.emit('send_message', {
@@ -232,6 +241,7 @@ export default function PracticeChat() {
             sessionId,
             userId: 'demo-user'
           });
+          setShouldAutoScroll(true); // AI回复时恢复自动滚动
         }
       }, 500);
     } else if (inputMessage.trim()) {
@@ -245,6 +255,7 @@ export default function PracticeChat() {
       setMessages(prev => [...prev, newMessage]);
       setInputMessage('');
       setIsTyping(true);
+      setShouldAutoScroll(false); // 用户发送消息时不自动滚动
       
       // 使用阿里云API生成回复
       generateAIResponse(inputMessage);
@@ -298,6 +309,7 @@ export default function PracticeChat() {
       }]);
     } finally {
       setIsTyping(false);
+      setShouldAutoScroll(true); // AI回复完成后恢复自动滚动
     }
   };
 
@@ -381,8 +393,8 @@ export default function PracticeChat() {
           });
 
           if (submitResponse.ok) {
-            // 跳转到评估结果页面
-            window.location.href = `/evaluation-result?sessionId=${realSessionId}`;
+            // 跳转到Mentor评估界面
+            window.location.href = `/mentor-evaluation?sessionId=${realSessionId}`;
             return;
           } else {
             throw new Error('Failed to submit real session');
@@ -401,8 +413,8 @@ export default function PracticeChat() {
 
         if (response.ok) {
           const result = await response.json();
-          // 跳转到评估结果页面
-          window.location.href = `/evaluation-result?sessionId=${sessionId}`;
+          // 跳转到Mentor评估界面
+          window.location.href = `/mentor-evaluation?sessionId=${sessionId}`;
         } else {
           const errorData = await response.json();
           alert('提交失败: ' + (errorData.error || '未知错误'));
@@ -455,7 +467,7 @@ export default function PracticeChat() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <Link href="/" className="text-2xl font-bold text-gray-900 hover:text-blue-600">
-                AI导师工具
+                AI Mentor工具
               </Link>
               <span className="ml-2 text-sm text-gray-500">学员对话界面</span>
             </div>
@@ -548,6 +560,30 @@ export default function PracticeChat() {
                   <div ref={messagesEndRef} />
                 </div>
                 
+                {/* 快速回复 */}
+                <div className="px-6 py-3 border-t border-gray-200 bg-gray-50">
+                  <div className="mb-2">
+                    <span className="text-xs font-medium text-gray-700">快速回复：</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {[
+                      '您对动力性能有什么具体要求吗？',
+                      '我来为您详细介绍一下991-2的配置优势',
+                      '相比小米SU7，保时捷在品牌价值方面...',
+                      '您平时主要在什么场景下用车？',
+                      '我们现在有很好的金融政策...'
+                    ].map((quickReply, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setInputMessage(quickReply)}
+                        className="px-3 py-1 text-xs bg-white hover:bg-blue-50 border border-gray-300 rounded-full transition-colors"
+                      >
+                        {quickReply}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
                 <div className="px-6 py-4 border-t border-gray-200">
                   <div className="flex space-x-2">
                     <input
@@ -574,89 +610,112 @@ export default function PracticeChat() {
             {/* 侧边栏信息 */}
             <div className="space-y-4">
               {/* 客户信息 */}
-              <div className="bg-white rounded-lg shadow p-4">
-                <h4 className="text-sm font-medium text-gray-900 mb-3">客户信息</h4>
-                <div className="space-y-2 text-sm">
-                  <div><span className="font-medium">姓名：</span>{getCustomerName(taskConfig || {})}</div>
-                  <div><span className="font-medium">职业：</span>{taskConfig?.customerProfession || '金融分析师'}</div>
-                  <div><span className="font-medium">年龄：</span>{taskConfig?.customerAge || '35岁'}</div>
-                  <div><span className="font-medium">性格：</span>{taskConfig?.customerPersonality?.join('、') || '理性、数据导向'}</div>
-                  <div><span className="font-medium">沟通方式：</span>{taskConfig?.customerCommunication || 'D控制型'}</div>
-                  <div><span className="font-medium">关注点：</span>{taskConfig?.customerFocus?.join('、') || '动力、智能化、残值'}</div>
-                  <div><span className="font-medium">竞品考虑：</span>{taskConfig?.competitorInterested || '小米SU7'}</div>
-                  <div><span className="font-medium">意向车型：</span>{taskConfig?.interestedVehicle || 'Taycan J2'}</div>
-                  {taskConfig?.customerHobbies?.length > 0 && (
-                    <div><span className="font-medium">兴趣爱好：</span>{taskConfig.customerHobbies.join('、')}</div>
-                  )}
+              <div className="bg-white rounded-lg shadow">
+                <div 
+                  className="p-4 cursor-pointer flex justify-between items-center hover:bg-gray-50"
+                  onClick={() => setIsCustomerInfoExpanded(!isCustomerInfoExpanded)}
+                >
+                  <h4 className="text-sm font-medium text-gray-900">客户信息</h4>
+                  <svg 
+                    className={`w-4 h-4 transition-transform ${isCustomerInfoExpanded ? 'rotate-180' : ''}`}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </div>
+                {isCustomerInfoExpanded && (
+                  <div className="px-4 pb-4 space-y-2 text-sm border-t border-gray-100">
+                    <div><span className="font-medium">姓名：</span>{getCustomerName(taskConfig || {})}</div>
+                    <div><span className="font-medium">职业：</span>{taskConfig?.customerProfession || '金融分析师'}</div>
+                    <div><span className="font-medium">年龄：</span>{taskConfig?.customerAge || '35岁'}</div>
+                    <div><span className="font-medium">性格：</span>{taskConfig?.customerPersonality?.join('、') || '理性、数据导向'}</div>
+                    <div><span className="font-medium">沟通方式：</span>{taskConfig?.customerCommunication || 'D控制型'}</div>
+                    <div><span className="font-medium">关注点：</span>{taskConfig?.customerFocus?.join('、') || '动力、智能化、残值'}</div>
+                    <div><span className="font-medium">竞品考虑：</span>{taskConfig?.competitorInterested || '小米SU7'}</div>
+                    <div><span className="font-medium">意向车型：</span>{taskConfig?.interestedVehicle || 'Taycan J2'}</div>
+                    {taskConfig?.customerHobbies?.length > 0 && (
+                      <div><span className="font-medium">兴趣爱好：</span>{taskConfig.customerHobbies.join('、')}</div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* 实时提示 */}
-              <div className="bg-white rounded-lg shadow p-4">
-                <h4 className="text-sm font-medium text-gray-900 mb-3">实时提示</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="p-2 bg-yellow-50 border-l-4 border-yellow-400">
-                    <p className="text-yellow-800">💡 客户关注残值率，可以重点介绍保时捷的保值性</p>
-                  </div>
-                  <div className="p-2 bg-blue-50 border-l-4 border-blue-400">
-                    <p className="text-blue-800">📊 使用FAB技巧：特征→优势→利益</p>
-                  </div>
-                  <div className="p-2 bg-green-50 border-l-4 border-green-400">
-                    <p className="text-green-800">✅ 已识别客户D型性格，保持直接高效的沟通</p>
-                  </div>
-                  <div className="p-2 bg-purple-50 border-l-4 border-purple-400">
-                    <p className="text-purple-800">🎯 建议询问客户具体用车场景</p>
-                  </div>
+              <div className="bg-white rounded-lg shadow">
+                <div 
+                  className="p-4 cursor-pointer flex justify-between items-center hover:bg-gray-50"
+                  onClick={() => setIsRealTimeTipsExpanded(!isRealTimeTipsExpanded)}
+                >
+                  <h4 className="text-sm font-medium text-gray-900">实时提示</h4>
+                  <svg 
+                    className={`w-4 h-4 transition-transform ${isRealTimeTipsExpanded ? 'rotate-180' : ''}`}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </div>
+                {isRealTimeTipsExpanded && (
+                  <div className="px-4 pb-4 space-y-2 text-sm border-t border-gray-100">
+                    <div className="p-2 bg-yellow-50 border-l-4 border-yellow-400">
+                      <p className="text-yellow-800">💡 客户关注残值率，可以重点介绍保时捷的保值性</p>
+                    </div>
+                    <div className="p-2 bg-blue-50 border-l-4 border-blue-400">
+                      <p className="text-blue-800">📊 使用FAB技巧：特征→优势→利益</p>
+                    </div>
+                    <div className="p-2 bg-green-50 border-l-4 border-green-400">
+                      <p className="text-green-800">✅ 已识别客户D型性格，保持直接高效的沟通</p>
+                    </div>
+                    <div className="p-2 bg-purple-50 border-l-4 border-purple-400">
+                      <p className="text-purple-800">🎯 建议询问客户具体用车场景</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 评估标准 */}
-              <div className="bg-white rounded-lg shadow p-4">
-                <h4 className="text-sm font-medium text-gray-900 mb-3">评估标准</h4>
-                <div className="space-y-2 text-xs">
-                  <div className="p-2 bg-gray-50 rounded">
-                    <p className="font-medium text-blue-900">沟通维度 (25%)</p>
-                    <p className="text-gray-600">匹配客户沟通方式、引导沟通方向</p>
-                  </div>
-                  <div className="p-2 bg-gray-50 rounded">
-                    <p className="font-medium text-green-900">本品维度 (25%)</p>
-                    <p className="text-gray-600">产品知识正确、突出配置优势</p>
-                  </div>
-                  <div className="p-2 bg-gray-50 rounded">
-                    <p className="font-medium text-orange-900">竞品维度 (25%)</p>
-                    <p className="text-gray-600">了解竞品知识、客观对比分析</p>
-                  </div>
-                  <div className="p-2 bg-gray-50 rounded">
-                    <p className="font-medium text-purple-900">客户信息获取 (15%)</p>
-                    <p className="text-gray-600">了解兴趣爱好、职业背景</p>
-                  </div>
-                  <div className="p-2 bg-gray-50 rounded">
-                    <p className="font-medium text-red-900">方法论匹配 (10%)</p>
-                    <p className="text-gray-600">清晰运用FAB销售技巧</p>
-                  </div>
+              <div className="bg-white rounded-lg shadow">
+                <div 
+                  className="p-4 cursor-pointer flex justify-between items-center hover:bg-gray-50"
+                  onClick={() => setIsEvaluationCriteriaExpanded(!isEvaluationCriteriaExpanded)}
+                >
+                  <h4 className="text-sm font-medium text-gray-900">评估标准</h4>
+                  <svg 
+                    className={`w-4 h-4 transition-transform ${isEvaluationCriteriaExpanded ? 'rotate-180' : ''}`}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </div>
-              </div>
-
-              {/* 快速回复 */}
-              <div className="bg-white rounded-lg shadow p-4">
-                <h4 className="text-sm font-medium text-gray-900 mb-3">快速回复</h4>
-                <div className="space-y-2">
-                  {[
-                    '您对动力性能有什么具体要求吗？',
-                    '我来为您详细介绍一下991-2的配置优势',
-                    '相比小米SU7，保时捷在品牌价值方面...',
-                    '您平时主要在什么场景下用车？',
-                    '我们现在有很好的金融政策...'
-                  ].map((quickReply, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setInputMessage(quickReply)}
-                      className="w-full text-left p-2 text-xs bg-gray-50 hover:bg-gray-100 rounded border"
-                    >
-                      {quickReply}
-                    </button>
-                  ))}
-                </div>
+                {isEvaluationCriteriaExpanded && (
+                  <div className="px-4 pb-4 space-y-2 text-xs border-t border-gray-100">
+                    <div className="p-2 bg-gray-50 rounded">
+                      <p className="font-medium text-blue-900">沟通维度 (25%)</p>
+                      <p className="text-gray-600">匹配客户沟通方式、引导沟通方向</p>
+                    </div>
+                    <div className="p-2 bg-gray-50 rounded">
+                      <p className="font-medium text-green-900">本品维度 (25%)</p>
+                      <p className="text-gray-600">产品知识正确、突出配置优势</p>
+                    </div>
+                    <div className="p-2 bg-gray-50 rounded">
+                      <p className="font-medium text-orange-900">竞品维度 (25%)</p>
+                      <p className="text-gray-600">了解竞品知识、客观对比分析</p>
+                    </div>
+                    <div className="p-2 bg-gray-50 rounded">
+                      <p className="font-medium text-purple-900">客户信息获取 (15%)</p>
+                      <p className="text-gray-600">了解兴趣爱好、职业背景</p>
+                    </div>
+                    <div className="p-2 bg-gray-50 rounded">
+                      <p className="font-medium text-red-900">方法论匹配 (10%)</p>
+                      <p className="text-gray-600">清晰运用FAB销售技巧</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 对话统计 */}

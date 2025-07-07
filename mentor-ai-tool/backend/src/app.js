@@ -73,7 +73,7 @@ app.use('/api/ai', aiRoutes); // AI endpoints (public for now)
 app.use('/api/tasks/dimensions', taskRoutes); // Public endpoint for dimensions
 app.use('/api/tasks', authMiddleware, taskRoutes);
 app.use('/api/sessions', sessionRoutes);
-app.use('/api/evaluations', authMiddleware, evaluationRoutes);
+app.use('/api/evaluations', evaluationRoutes);
 app.use('/api/analytics', authMiddleware, analyticsRoutes);
 
 // Socket.IO connection handling

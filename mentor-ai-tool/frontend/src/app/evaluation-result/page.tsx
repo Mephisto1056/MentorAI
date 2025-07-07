@@ -179,7 +179,7 @@ export default function EvaluationResult() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <Link href="/" className="text-2xl font-bold text-gray-900 hover:text-blue-600">
-                AI导师工具
+                AI Mentor工具
               </Link>
               <span className="ml-2 text-sm text-gray-500">评估结果</span>
             </div>
@@ -221,7 +221,7 @@ export default function EvaluationResult() {
                     <div className="text-2xl font-bold text-green-600">
                       {evaluationData.mentorEvaluation.overallScore}
                     </div>
-                    <div className="text-sm text-gray-500">导师评分</div>
+                    <div className="text-sm text-gray-500">Mentor评分</div>
                   </div>
                 )}
               </div>
@@ -251,7 +251,7 @@ export default function EvaluationResult() {
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     }`}
                   >
-                    导师评估
+                    Mentor评估
                   </button>
                 )}
                 <button
@@ -372,10 +372,10 @@ export default function EvaluationResult() {
                       {evaluationData.mentorEvaluation.overallScore}
                     </div>
                     <div className="text-lg text-gray-600">
-                      {getScoreLabel(evaluationData.mentorEvaluation.overallScore)} - 导师评分
+                      {getScoreLabel(evaluationData.mentorEvaluation.overallScore)} - Mentor评分
                     </div>
                     <div className="text-sm text-gray-500 mt-2">
-                      评估导师: {evaluationData.mentorEvaluation.evaluatedBy?.profile?.name || '未知导师'}
+                      评估Mentor: {evaluationData.mentorEvaluation.evaluatedBy?.profile?.name || '未知Mentor'}
                     </div>
                     <div className="text-sm text-gray-500">
                       评估时间: {evaluationData.mentorEvaluation.evaluatedAt ? new Date(evaluationData.mentorEvaluation.evaluatedAt).toLocaleString('zh-CN') : '未知时间'}
@@ -383,7 +383,7 @@ export default function EvaluationResult() {
                   </div>
 
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h4 className="text-md font-medium text-gray-900 mb-3">导师反馈</h4>
+                    <h4 className="text-md font-medium text-gray-900 mb-3">Mentor反馈</h4>
                     <p className="text-gray-700 whitespace-pre-wrap">{evaluationData.mentorEvaluation.feedback}</p>
                   </div>
                 </div>

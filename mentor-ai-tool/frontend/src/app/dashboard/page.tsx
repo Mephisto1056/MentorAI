@@ -15,7 +15,7 @@ export default function Dashboard() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <Link href="/" className="text-2xl font-bold text-gray-900 hover:text-blue-600">
-                AI导师工具
+                AI Mentor工具
               </Link>
               <span className="ml-2 text-sm text-gray-500">后台面板界面</span>
             </div>
@@ -89,7 +89,7 @@ export default function Dashboard() {
                 change: '+2.1', 
                 changeType: 'increase',
                 color: 'purple',
-                description: 'AI+导师综合评分'
+                description: 'AI+Mentor综合评分'
               },
               { 
                 title: '活跃学员', 
@@ -138,7 +138,7 @@ export default function Dashboard() {
                 <div className="text-center">
                   <div className="text-4xl mb-2">🎯</div>
                   <p className="text-gray-500">评价度分布图</p>
-                  <p className="text-sm text-gray-400 mt-2">AI评分 vs 导师评分对比</p>
+                  <p className="text-sm text-gray-400 mt-2">AI评分 vs Mentor评分对比</p>
                 </div>
               </div>
             </div>
@@ -306,7 +306,7 @@ export default function Dashboard() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">任务分配</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">完成率</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AI评分</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">导师评分</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mentor评分</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">综合评价</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最后活跃</th>
                   </tr>

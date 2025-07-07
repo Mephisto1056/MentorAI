@@ -97,6 +97,40 @@ const practiceSessionSchema = new mongoose.Schema({
     },
     evaluatedAt: {
       type: Date
+    },
+    // 详细的14个细则评分
+    detailedScores: {
+      // 沟通维度 (4个细则)
+      criteria1: { type: Number, min: 0, max: 100 }, // 匹配客户的沟通方式
+      criteria2: { type: Number, min: 0, max: 100 }, // 识别客户的沟通方式
+      criteria3: { type: Number, min: 0, max: 100 }, // 引导沟通的方向
+      criteria4: { type: Number, min: 0, max: 100 }, // 清晰的表达自己的观点
+      
+      // 本品维度 (3个细则)
+      criteria5: { type: Number, min: 0, max: 100 }, // 本品产品知识正确
+      criteria6: { type: Number, min: 0, max: 100 }, // 突出本产品的配置或者功能优势
+      criteria7: { type: Number, min: 0, max: 100 }, // 清晰的确定客户的目标车型
+      
+      // 竞品维度 (3个细则)
+      criteria8: { type: Number, min: 0, max: 100 }, // 了解竞品的相关知识
+      criteria9: { type: Number, min: 0, max: 100 }, // 可以找出本品和竞品间的差异
+      criteria10: { type: Number, min: 0, max: 100 }, // 可以客观的进行竞品和本品的对比
+      
+      // 客户信息获取维度 (3个细则)
+      criteria11: { type: Number, min: 0, max: 100 }, // 了解了客户的兴趣爱好
+      criteria12: { type: Number, min: 0, max: 100 }, // 了解了客户的职业背景
+      criteria13: { type: Number, min: 0, max: 100 }, // 可以匹配客户的性格特征，进行沟通
+      
+      // 方法论匹配度 (1个细则)
+      criteria14: { type: Number, min: 0, max: 100 }  // 可以在场景中，清晰运用预设的方法论
+    },
+    // 各维度平均分
+    dimensionAverages: {
+      communication: { type: Number, min: 0, max: 100 },    // 沟通维度平均分
+      ownProduct: { type: Number, min: 0, max: 100 },       // 本品维度平均分
+      competitor: { type: Number, min: 0, max: 100 },       // 竞品维度平均分
+      customerInfo: { type: Number, min: 0, max: 100 },     // 客户信息获取维度平均分
+      methodology: { type: Number, min: 0, max: 100 }       // 方法论匹配度
     }
   },
   customerProfile: {
