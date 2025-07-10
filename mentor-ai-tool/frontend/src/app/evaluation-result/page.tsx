@@ -8,6 +8,7 @@ interface CriteriaDetail {
   criteria: string;
   score: number;
   feedback: string;
+  evidence?: string;
 }
 
 interface DimensionScore {
@@ -72,7 +73,7 @@ export default function EvaluationResult() {
 
   const fetchEvaluationData = async (id: string) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/sessions/${id}/evaluation`);
+      const response = await fetch(`http://localhost:6100/api/sessions/${id}/evaluation`);
       
       if (response.ok) {
         const result = await response.json();
@@ -324,6 +325,11 @@ export default function EvaluationResult() {
                                   </span>
                                 </div>
                                 <p className="text-xs text-gray-600">{detail.feedback}</p>
+                                {detail.evidence && (
+                                 <div className="mt-2 p-2 bg-gray-100 border-l-2 border-gray-300">
+                                   <p className="text-xs text-gray-500 italic">对话依据: "{detail.evidence}"</p>
+                                 </div>
+                                )}
                               </div>
                             ))}
                           </div>

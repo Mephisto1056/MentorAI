@@ -104,7 +104,7 @@ export default function MentorEvaluation() {
 
   const fetchPendingSessions = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/evaluations/pending');
+      const response = await fetch('http://localhost:6100/api/evaluations/pending');
       
       if (response.ok) {
         const result = await response.json();
@@ -122,7 +122,7 @@ export default function MentorEvaluation() {
 
   const fetchSessionDetail = async (sessionId: string) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/sessions/${sessionId}/evaluation`);
+      const response = await fetch(`http://localhost:6100/api/sessions/${sessionId}/evaluation`);
       
       if (response.ok) {
         const result = await response.json();
@@ -190,7 +190,7 @@ export default function MentorEvaluation() {
         detailedScores: detailedScores
       };
 
-      const response = await fetch(`http://localhost:5000/api/evaluations/${selectedSession.sessionId}`, {
+      const response = await fetch(`http://localhost:6100/api/evaluations/${selectedSession.sessionId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -488,7 +488,12 @@ export default function MentorEvaluation() {
                                         </span>
                                       </div>
                                       <p className="text-gray-600 mt-1">{detail.feedback}</p>
-                                    </div>
+                                      {detail.evidence && (
+                                        <div className="mt-2 p-2 bg-gray-100 border-l-2 border-gray-300">
+                                          <p className="text-xs text-gray-500 italic">对话依据: "{detail.evidence}"</p>
+                                        </div>
+                                      )}
+                                      </div>
                                   ))}
                                 </div>
                               )}
@@ -636,31 +641,49 @@ export default function MentorEvaluation() {
                                 {dimensionName}
                               </h5>
                               <div className="space-y-4">
-                                {dimensionCriteria.map((criteria) => (
-                                  <div key={criteria.id} className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                      <label className="text-sm font-medium text-gray-700">
-                                        {EVALUATION_CRITERIA.findIndex(c => c.id === criteria.id) + 1}. {criteria.name}
-                                      </label>
-                                      <div className="flex items-center space-x-2">
-                                        <span className={`text-lg font-bold ${getScoreColor(detailedScores[criteria.id as keyof DetailedScores])}`}>
-                                          {detailedScores[criteria.id as keyof DetailedScores]}
-                                        </span>
-                                        <span className="text-xs text-gray-500">
-                                          {getScoreLabel(detailedScores[criteria.id as keyof DetailedScores])}
-                                        </span>
+                                {dimensionCriteria.map((criteria) => {
+                                  const aiDetail = selectedSession?.aiEvaluation?.dimensionScores
+                                    ?.flatMap((d: any) => d.details || [])
+                                    .find((detail: any) => detail?.id === criteria.id);
+
+                                  return (
+                                    <div key={criteria.id} className="space-y-2">
+                                      <div className="flex justify-between items-center">
+                                        <label className="text-sm font-medium text-gray-700">
+                                          {EVALUATION_CRITERIA.findIndex(c => c.id === criteria.id) + 1}. {criteria.name}
+                                        </label>
+                                        <div className="flex items-center space-x-2">
+                                          <span className={`text-lg font-bold ${getScoreColor(detailedScores[criteria.id as keyof DetailedScores])}`}>
+                                            {detailedScores[criteria.id as keyof DetailedScores]}
+                                          </span>
+                                          <span className="text-xs text-gray-500">
+                                            {getScoreLabel(detailedScores[criteria.id as keyof DetailedScores])}
+                                          </span>
+                                        </div>
                                       </div>
+                                      <input
+                                        type="range"
+                                        min="0"
+                                        max="100"
+                                        value={detailedScores[criteria.id as keyof DetailedScores]}
+                                        onChange={(e) => updateDetailedScore(criteria.id as keyof DetailedScores, parseInt(e.target.value))}
+                                        className="w-full"
+                                      />
+                                      {aiDetail && (
+                                        <div className="mt-2 p-2 bg-blue-50 border-l-4 border-blue-300 rounded-r-lg">
+                                          <p className="text-xs text-blue-800">
+                                            <span className="font-bold">AI评分: {aiDetail.score}</span> - {aiDetail.feedback}
+                                          </p>
+                                          {aiDetail.evidence && (
+                                            <p className="text-xs text-gray-600 italic mt-1">
+                                              依据: "{aiDetail.evidence}"
+                                            </p>
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
-                                    <input
-                                      type="range"
-                                      min="0"
-                                      max="100"
-                                      value={detailedScores[criteria.id as keyof DetailedScores]}
-                                      onChange={(e) => updateDetailedScore(criteria.id as keyof DetailedScores, parseInt(e.target.value))}
-                                      className="w-full"
-                                    />
-                                  </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             </div>
                           );

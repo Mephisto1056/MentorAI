@@ -1,13 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-export default function TaskGenerator() {
+interface CustomerType {
+  name: string;
+  description: string;
+  characteristics: any;
+}
+
+export default function TaskGenerator(): React.JSX.Element {
   const [taskConfig, setTaskConfig] = useState({
     taskGoal: '',
     methodology: '',
     trainingFocus: [] as string[], // 新增：训练重点
+    customerType: '', // 新增：客户类型
     customerPersonality: [] as string[],
     customerProfession: '',
     customerCommunication: '',
@@ -26,6 +33,9 @@ export default function TaskGenerator() {
 
   const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [conflictWarnings, setConflictWarnings] = useState<string[]>([]);
+  const [customerTypes, setCustomerTypes] = useState<CustomerType[]>([]);
+  const [isLoadingTypes, setIsLoadingTypes] = useState(false);
+  const [recommendedType, setRecommendedType] = useState<string>('');
 
   // 冲突检测规则
   const conflictRules = {
@@ -106,18 +116,106 @@ export default function TaskGenerator() {
     }
   };
 
+  // 加载客户类型
+  useEffect(() => {
+    const loadCustomerTypes = async () => {
+      setIsLoadingTypes(true);
+      try {
+        const response = await fetch('http://localhost:6100/api/customer-types');
+        if (response.ok) {
+          const data = await response.json();
+          setCustomerTypes(data.data || []);
+        }
+      } catch (error) {
+        console.error('Failed to load customer types:', error);
+      } finally {
+        setIsLoadingTypes(false);
+      }
+    };
+
+    loadCustomerTypes();
+  }, []);
+
   // 使用useEffect监听配置变化，实时检测冲突
   useEffect(() => {
     const warnings = detectConflicts(taskConfig);
     setConflictWarnings(warnings);
   }, [taskConfig]);
 
-  const generatePrompt = () => {
-    const trainingFocusText = taskConfig.trainingFocus.length > 0 
-      ? `\n## 训练重点\n本次对话将重点训练以下维度：${taskConfig.trainingFocus.join('、')}\n请在对话中特别关注这些方面的表现。`
-      : '';
+  // 智能推荐客户类型
+  const recommendCustomerType = async () => {
+    try {
+      const response = await fetch('http://localhost:6100/api/customer-types/recommend', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          profession: taskConfig.customerProfession,
+          personality: taskConfig.customerPersonality,
+          focusPoints: taskConfig.customerFocus,
+          communicationStyle: taskConfig.customerCommunication,
+          age: taskConfig.customerAge
+        })
+      });
 
-    const prompt = `
+      if (response.ok) {
+        const data = await response.json();
+        setRecommendedType(data.data.recommendedType);
+        console.log('Recommended customer type:', data.data);
+      }
+    } catch (error) {
+      console.error('Failed to recommend customer type:', error);
+    }
+  };
+
+  // 应用客户类型配置
+  const applyCustomerType = async (customerType: string) => {
+    try {
+      const response = await fetch(`http://localhost:6100/api/customer-types/${encodeURIComponent(customerType)}/config`);
+      if (response.ok) {
+        const data = await response.json();
+        const config = data.data;
+        
+        // 更新配置
+        setTaskConfig(prev => ({
+          ...prev,
+          customerType: customerType,
+          customerPersonality: config.customerPersonality || prev.customerPersonality,
+          customerProfession: config.customerProfession || prev.customerProfession,
+          customerCommunication: config.customerCommunication || prev.customerCommunication,
+          customerHobbies: config.customerHobbies || prev.customerHobbies,
+          customerGender: config.customerGender || prev.customerGender,
+          customerAge: config.customerAge || prev.customerAge,
+          customerFocus: config.customerFocus || prev.customerFocus
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to apply customer type:', error);
+    }
+  };
+
+  const generatePrompt = async () => {
+    try {
+      // 调用后端API生成智能优化的prompt
+      const response = await fetch('http://localhost:6100/api/ai/generate-prompt', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(taskConfig)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setGeneratedPrompt(data.prompt);
+      } else {
+        // 如果API调用失败，使用原来的简单拼接方式作为备选
+        const trainingFocusText = taskConfig.trainingFocus.length > 0 
+          ? `\n## 训练重点\n本次对话将重点训练以下维度：${taskConfig.trainingFocus.join('、')}\n请在对话中特别关注这些方面的表现。`
+          : '';
+
+        const prompt = `
 # AI客户角色设定
 
 ## 任务目标
@@ -151,12 +249,57 @@ ${taskConfig.methodology || '未设置'}${trainingFocusText}
 ${taskConfig.trainingFocus.length > 0 ? `
 特别注意：
 ${taskConfig.trainingFocus.includes('沟通维度') ? '- 根据你的沟通方式特点进行对话，测试销售顾问的沟通适应能力\n' : ''}${taskConfig.trainingFocus.includes('本品维度') ? '- 重点询问产品相关问题，测试销售顾问的产品知识和优势展示能力\n' : ''}${taskConfig.trainingFocus.includes('竞品维度') ? '- 主动提及竞品对比，测试销售顾问的竞品分析和差异化说明能力\n' : ''}${taskConfig.trainingFocus.includes('客户信息获取维度') ? '- 适度隐藏个人信息，测试销售顾问的信息挖掘和需求识别能力\n' : ''}` : ''}
-    `;
-    setGeneratedPrompt(prompt);
+        `;
+        setGeneratedPrompt(prompt);
+      }
+    } catch (error) {
+      console.error('Failed to generate prompt:', error);
+      // 错误时使用简单拼接方式
+      const trainingFocusText = taskConfig.trainingFocus.length > 0 
+        ? `\n## 训练重点\n本次对话将重点训练以下维度：${taskConfig.trainingFocus.join('、')}\n请在对话中特别关注这些方面的表现。`
+        : '';
+
+      const prompt = `
+# AI客户角色设定
+
+## 任务目标
+${taskConfig.taskGoal || '未设置'}
+
+## 销售方法论
+${taskConfig.methodology || '未设置'}${trainingFocusText}
+
+## 客户画像
+- **性格特征**: ${taskConfig.customerPersonality.join('、') || '未设置'}
+- **职业背景**: ${taskConfig.customerProfession || '未设置'}
+- **沟通方式**: ${taskConfig.customerCommunication || '未设置'}
+- **兴趣爱好**: ${taskConfig.customerHobbies.join('、') || '未设置'}
+- **性别年龄**: ${taskConfig.customerGender} ${taskConfig.customerAge}
+
+## 本品维度
+- **现驾车型**: ${taskConfig.currentVehicle || '未设置'}
+- **意向车型**: ${taskConfig.interestedVehicle || '未设置'}
+- **关注重点**: ${taskConfig.customerFocus.join('、') || '未设置'}
+
+## 竞品维度
+- **现驾车型**: ${taskConfig.competitorCurrent || '未设置'}
+- **意向车型**: ${taskConfig.competitorInterested || '未设置'}
+- **关注重点**: ${taskConfig.competitorFocus.join('、') || '未设置'}
+
+## 交易相关
+- **洽谈环节**: ${taskConfig.negotiationStage || '未设置'}
+- **交易关注点**: ${taskConfig.transactionConcerns.join('、') || '未设置'}
+
+请根据以上设定扮演一位真实的客户，与销售顾问进行自然对话。
+${taskConfig.trainingFocus.length > 0 ? `
+特别注意：
+${taskConfig.trainingFocus.includes('沟通维度') ? '- 根据你的沟通方式特点进行对话，测试销售顾问的沟通适应能力\n' : ''}${taskConfig.trainingFocus.includes('本品维度') ? '- 重点询问产品相关问题，测试销售顾问的产品知识和优势展示能力\n' : ''}${taskConfig.trainingFocus.includes('竞品维度') ? '- 主动提及竞品对比，测试销售顾问的竞品分析和差异化说明能力\n' : ''}${taskConfig.trainingFocus.includes('客户信息获取维度') ? '- 适度隐藏个人信息，测试销售顾问的信息挖掘和需求识别能力\n' : ''}` : ''}
+      `;
+      setGeneratedPrompt(prompt);
+    }
   };
 
   const randomSelectAll = () => {
-    // 随机选择所有配置项
+    // 随机选择所有配置项 - 确保与左侧选项完全一致
     const taskGoals = ['小米SU7竞品对比', '991-2产品介绍', '客户需求挖掘', '金融方案销售', '试驾邀约'];
     const methodologies = ['FAB产品介绍技巧', 'RACE竞品对比介绍', 'SPIN销售法', '顾问式销售'];
     const personalities = ['独立', '犹豫', '理性', '强势', '相信朋友', '数据导向', '主导权', '隐藏需求', '喜欢案例', '积极表达', '易信网络', '服从权威'];
@@ -182,34 +325,72 @@ ${taskConfig.trainingFocus.includes('沟通维度') ? '- 根据你的沟通方�
 
     const trainingFocuses = ['沟通维度', '本品维度', '竞品维度', '客户信息获取维度'];
 
+    // 智能选择：避免冲突的配置组合
+    const selectedTaskGoal = randomChoice(taskGoals);
+    let selectedMethodology = randomChoice(methodologies);
+    
+    // 根据任务目标智能匹配方法论
+    const taskMethodologyMap: { [key: string]: string[] } = {
+      '小米SU7竞品对比': ['RACE竞品对比介绍'],
+      '991-2产品介绍': ['FAB产品介绍技巧'],
+      '客户需求挖掘': ['SPIN销售法'],
+      '金融方案销售': ['顾问式销售'],
+      '试驾邀约': ['顾问式销售', 'SPIN销售法']
+    };
+    
+    if (taskMethodologyMap[selectedTaskGoal]) {
+      selectedMethodology = randomChoice(taskMethodologyMap[selectedTaskGoal]);
+    }
+
+    // 智能选择沟通方式和性格特征的匹配
+    const selectedCommunication = randomChoice(communications);
+    let selectedPersonalities = randomChoices(personalities, Math.floor(Math.random() * 4) + 1);
+    
+    const communicationPersonalityMap: { [key: string]: string[] } = {
+      'D控制型': ['强势', '主导权', '独立'],
+      'I影响型': ['积极表达', '相信朋友', '喜欢案例'],
+      'C遵循型': ['服从权威', '数据导向', '理性'],
+      'S稳定型': ['犹豫', '隐藏需求']
+    };
+    
+    if (communicationPersonalityMap[selectedCommunication]) {
+      // 确保至少包含一个匹配的性格特征
+      const matchingTraits = communicationPersonalityMap[selectedCommunication];
+      const randomMatchingTrait = randomChoice(matchingTraits);
+      selectedPersonalities = [randomMatchingTrait, ...randomChoices(personalities.filter(p => p !== randomMatchingTrait), Math.floor(Math.random() * 2))];
+    }
+
+    // 避免车型冲突
+    const selectedCurrentVehicle = randomChoice(currentVehicles);
+    const availableInterestedVehicles = interestedVehicles.filter(v => v !== selectedCurrentVehicle);
+    const selectedInterestedVehicle = randomChoice(availableInterestedVehicles);
+
+    const selectedCompetitorCurrent = randomChoice(competitorCurrents);
+    const availableCompetitorInterested = competitorInteresteds.filter(v => v !== selectedCompetitorCurrent);
+    const selectedCompetitorInterested = randomChoice(availableCompetitorInterested);
+
     setTaskConfig({
-      taskGoal: randomChoice(taskGoals),
-      methodology: randomChoice(methodologies),
+      taskGoal: selectedTaskGoal,
+      methodology: selectedMethodology,
       trainingFocus: randomChoices(trainingFocuses, Math.floor(Math.random() * 2) + 1),
-      customerPersonality: randomChoices(personalities, Math.floor(Math.random() * 4) + 1),
+      customerType: '', // 重置客户类型，让系统自动推荐
+      customerPersonality: selectedPersonalities,
       customerProfession: randomChoice(professions),
-      customerCommunication: randomChoice(communications),
+      customerCommunication: selectedCommunication,
       customerHobbies: randomChoices(hobbies, Math.floor(Math.random() * 3) + 1),
       customerGender: randomChoice(genders),
       customerAge: randomChoice(ages),
-      currentVehicle: randomChoice(currentVehicles),
-      interestedVehicle: randomChoice(interestedVehicles),
+      currentVehicle: selectedCurrentVehicle,
+      interestedVehicle: selectedInterestedVehicle,
       customerFocus: randomChoices(focuses, Math.floor(Math.random() * 3) + 1),
-      competitorCurrent: randomChoice(competitorCurrents),
-      competitorInterested: randomChoice(competitorInteresteds),
+      competitorCurrent: selectedCompetitorCurrent,
+      competitorInterested: selectedCompetitorInterested,
       competitorFocus: randomChoices(focuses, Math.floor(Math.random() * 3) + 1),
       negotiationStage: randomChoice(negotiationStages),
       transactionConcerns: randomChoices(transactionConcerns, Math.floor(Math.random() * 3) + 1)
     });
   };
 
-  const randomGeneratePrompt = () => {
-    randomSelectAll();
-    // 延迟一点时间确保状态更新完成，然后生成prompt
-    setTimeout(() => {
-      generatePrompt();
-    }, 100);
-  };
 
   const updateConfig = (key: string, value: any) => {
     setTaskConfig(prev => ({ ...prev, [key]: value }));
@@ -258,11 +439,11 @@ ${taskConfig.trainingFocus.includes('沟通维度') ? '- 根据你的沟通方�
             <h2 className="text-2xl font-bold text-gray-900">任务生成界面</h2>
             <div className="flex space-x-3">
               <button 
-                onClick={randomGeneratePrompt}
-                className="bg-orange-600 text-white px-6 py-2 rounded-md hover:bg-orange-700 flex items-center"
+                onClick={randomSelectAll}
+                className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 flex items-center"
               >
-                <span className="mr-2">🎲</span>
-                一键随机生成Prompt
+                <span className="mr-1">🎲</span>
+                随机选择
               </button>
               <button 
                 onClick={generatePrompt}
@@ -620,15 +801,8 @@ ${taskConfig.trainingFocus.includes('沟通维度') ? '- 根据你的沟通方�
 
             {/* 生成的Prompt预览 */}
             <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex justify-between items-center mb-4">
+              <div className="mb-4">
                 <h3 className="text-lg font-medium text-gray-900">生成的AI角色Prompt</h3>
-                <button 
-                  onClick={randomSelectAll}
-                  className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 flex items-center text-sm"
-                >
-                  <span className="mr-1">🎲</span>
-                  随机选择
-                </button>
               </div>
               <div className="bg-gray-50 rounded-md p-4 h-96 overflow-y-auto">
                 <pre className="text-sm text-gray-700 whitespace-pre-wrap">

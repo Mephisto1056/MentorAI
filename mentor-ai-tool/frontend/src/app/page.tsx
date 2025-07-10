@@ -80,6 +80,31 @@ export default function Home() {
             </div>
           </div>
 
+          {/* 导师评估界面 */}
+          <div className="bg-white rounded-lg shadow-lg p-8 hover:shadow-xl transition-shadow">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">👨‍🏫</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Mentor评估界面</h3>
+              <p className="text-gray-600 mb-6">
+                Mentor查看学员练习记录，结合AI评估进行专业指导和反馈报告            
+              </p>
+              <div className="space-y-2 text-sm text-gray-500 mb-6">
+                <div>• 待评估会话列表</div>
+                <div>• AI评估结果参考</div>
+                <div>• Mentor专业评价</div>
+                <div>• 双重反馈机制</div>
+              </div>
+              <a
+                href="/mentor-evaluation"
+                className="inline-block bg-orange-600 text-white px-6 py-3 rounded-md hover:bg-orange-700 transition-colors"
+              >
+                开始评估学员
+              </a>
+            </div>
+          </div>
+
           {/* 后台面板界面 */}
           <div className="bg-white rounded-lg shadow-lg p-8 hover:shadow-xl transition-shadow">
             <div className="text-center">
@@ -105,30 +130,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 导师评估界面 */}
-          <div className="bg-white rounded-lg shadow-lg p-8 hover:shadow-xl transition-shadow">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">👨‍🏫</span>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Mentor评估界面</h3>
-              <p className="text-gray-600 mb-6">
-                Mentor查看学员练习记录，结合AI评估进行专业指导和反馈
-              </p>
-              <div className="space-y-2 text-sm text-gray-500 mb-6">
-                <div>• 待评估会话列表</div>
-                <div>• AI评估结果参考</div>
-                <div>• Mentor专业评价</div>
-                <div>• 双重反馈机制</div>
-              </div>
-              <a
-                href="/mentor-evaluation"
-                className="inline-block bg-orange-600 text-white px-6 py-3 rounded-md hover:bg-orange-700 transition-colors"
-              >
-                开始评估学员
-              </a>
-            </div>
-          </div>
         </div>
 
         {/* 系统特色 */}

@@ -1,5 +1,7 @@
 const axios = require('axios');
 const logger = require('../utils/logger');
+const customerProfileService = require('./customerProfileService');
+const voiceService = require('./voiceService');
 
 class AIService {
   constructor() {
@@ -28,13 +30,43 @@ class AIService {
   }
 
   /**
-   * 生成AI客户角色prompt - 支持四维度训练重点
+   * 生成AI客户角色prompt - 升级版，支持保时捷十大客户类型
    */
   generateCustomerPrompt(taskConfig) {
     // 兼容新旧格式
     const config = taskConfig.customerPersonality ? taskConfig : this.convertLegacyFormat(taskConfig);
     
-    // 基础角色设定
+    // 如果指定了客户类型，使用专业的客户类型提示词
+    if (config.customerType) {
+      try {
+        return customerProfileService.generateCustomerTypePrompt(config.customerType, config);
+      } catch (error) {
+        logger.warn(`Failed to generate customer type prompt for ${config.customerType}:`, error);
+        // 降级到基础提示词
+      }
+    }
+    
+    // 智能推荐客户类型
+    if (!config.customerType && (config.customerProfession || config.customerPersonality || config.customerFocus)) {
+      try {
+        const recommendation = customerProfileService.recommendCustomerType({
+          profession: config.customerProfession,
+          personality: config.customerPersonality,
+          focusPoints: config.customerFocus,
+          communicationStyle: config.customerCommunication,
+          age: config.customerAge
+        });
+        
+        if (recommendation.confidence > 0.3) {
+          logger.info(`Auto-recommended customer type: ${recommendation.recommendedType} (confidence: ${recommendation.confidence})`);
+          return customerProfileService.generateCustomerTypePrompt(recommendation.recommendedType, config);
+        }
+      } catch (error) {
+        logger.warn('Failed to auto-recommend customer type:', error);
+      }
+    }
+    
+    // 基础角色设定（兼容旧版本）
     let prompt = `你是一个汽车销售场景中的模拟客户，请根据以下设定进行角色扮演：
 
 ## 任务目标
@@ -262,6 +294,53 @@ ${config.methodology || '常规销售'}
   }
 
   /**
+   * 生成客户语音响应（文字+语音）
+   */
+  async generateCustomerVoiceResponse(conversation, customerProfile, taskConfig, enableVoice = true) {
+    try {
+      // 首先生成文字响应
+      const textResponse = await this.generateCustomerResponse(conversation, customerProfile, taskConfig);
+      
+      const result = {
+        text: textResponse,
+        timestamp: new Date(),
+        customerProfile: customerProfile
+      };
+
+      // 如果启用语音，生成语音
+      if (enableVoice) {
+        try {
+          const voiceResponse = await voiceService.generateCustomerVoiceResponse(textResponse, customerProfile);
+          result.voice = voiceResponse.voice;
+          result.voiceProfile = voiceResponse.voiceProfile;
+        } catch (voiceError) {
+          logger.warn('Voice generation failed, using text only:', voiceError);
+          result.voice = {
+            success: false,
+            fallback: true,
+            error: 'Voice generation failed',
+            source: 'error'
+          };
+        }
+      }
+
+      return result;
+    } catch (error) {
+      logger.error('Customer voice response generation error:', error);
+      return {
+        text: '抱歉，我需要一点时间思考。请继续介绍您的产品。',
+        voice: {
+          success: false,
+          fallback: true,
+          error: 'Response generation failed'
+        },
+        timestamp: new Date(),
+        customerProfile: customerProfile
+      };
+    }
+  }
+
+  /**
    * 评估学员表现 - 按照14个具体标准进行评估
    */
   async evaluatePerformance(conversation, evaluationCriteria) {
@@ -298,7 +377,7 @@ ${config.methodology || '常规销售'}
       const methodology = evaluationCriteria?.methodology || 'FAB产品介绍技巧';
       const customerProfile = evaluationCriteria?.customerProfile || {};
 
-      const evaluationPrompt = `请作为专业的汽车销售培训师，根据以下对话内容对销售顾问的表现进行详细评估：
+      const evaluationPrompt = `请作为专业的汽车销售培训师，根据以下对话内容对销售顾问的表现进行详细评估。
 
 ## 任务背景
 - 任务目标：${taskGoal}
@@ -308,68 +387,69 @@ ${config.methodology || '常规销售'}
 ## 对话内容
 ${conversation.map(msg => `${msg.role === 'student' ? '销售顾问' : '客户'}：${msg.message}`).join('\n')}
 
-## 评估标准（共14个细则）
-请按照以下具体标准逐一评估：
+## 评估指令
+请严格按照下面的14个细则，对销售顾问的表现进行逐一打分和评价。
 
-### 沟通维度（4个细则）
-1. 匹配客户的沟通方式 - 是否根据客户性格调整沟通风格
-2. 识别客户的沟通方式 - 是否准确识别客户的沟通偏好
-3. 引导沟通的方向 - 是否有效引导对话朝目标方向发展
-4. 清晰的表达自己的观点 - 表达是否清晰、逻辑性强
+### 评估标准
+请为以下每个细则评分，并提供id。
+1.  **沟通维度**:
+    *   (id: criteria1) 匹配客户的沟通方式: 是否根据客户性格调整沟通风格。
+    *   (id: criteria2) 识别客户的沟通方式: 是否准确识别客户的沟通偏好。
+    *   (id: criteria3) 引导沟通的方向: 是否有效引导对话朝目标方向发展。
+    *   (id: criteria4) 清晰的表达自己的观点: 表达是否清晰、逻辑性强。
+2.  **本品维度**:
+    *   (id: criteria5) 本品产品知识正确: 产品信息是否准确无误。
+    *   (id: criteria6) 突出本产品的配置或者功能优势: 是否有效展示产品亮点。
+    *   (id: criteria7) 清晰的确定客户的目标车型: 是否明确客户真实需求。
+3.  **竞品维度**:
+    *   (id: criteria8) 了解竞品的相关知识: 对竞争对手产品的了解程度。
+    *   (id: criteria9) 可以找出本品和竞品间的差异: 差异化分析能力。
+    *   (id: criteria10) 可以客观的进行竞品和本品的对比: 对比分析的客观性。
+4.  **客户信息获取维度**:
+    *   (id: criteria11) 了解了客户的兴趣爱好: 是否挖掘客户个人兴趣。
+    *   (id: criteria12) 了解了客户的职业背景: 是否了解客户工作情况。
+    *   (id: criteria13) 可以匹配客户的性格特征，进行沟通: 性格匹配度。
+5.  **方法论匹配度**:
+    *   (id: criteria14) 可以在场景中，清晰运用预设的方法论: ${methodology}的运用情况。
 
-### 本品维度（3个细则）
-5. 本品产品知识正确 - 产品信息是否准确无误
-6. 突出本产品的配置或者功能优势 - 是否有效展示产品亮点
-7. 清晰的确定客户的目标车型 - 是否明确客户真实需求
+### 输出要求
+你必须返回一个严格符合以下描述的JSON对象，不要添加任何额外的解释或注释。
 
-### 竞品维度（3个细则）
-8. 了解竞品的相关知识 - 对竞争对手产品的了解程度
-9. 可以找出本品和竞品间的差异 - 差异化分析能力
-10. 可以客观的进行竞品和本品的对比 - 对比分析的客观性
-
-### 客户信息获取维度（3个细则）
-11. 了解了客户的兴趣爱好 - 是否挖掘客户个人兴趣
-12. 了解了客户的职业背景 - 是否了解客户工作情况
-13. 可以匹配客户的性格特征，进行沟通 - 性格匹配度
-
-### 方法论匹配度（1个细则）
-14. 可以在场景中，清晰运用预设的方法论 - ${methodology}的运用情况
-
-## 输出要求
-请严格按照以下JSON格式返回评估结果，每个维度包含详细的细则评分：
-
+\`\`\`json
 {
-  "overallScore": 85,
+  "overallScore": <总平均分, 整数>,
   "dimensionScores": [
     {
-      "dimension": "沟通维度",
-      "score": 80,
+      "dimension": "<维度名称>",
+      "score": <该维度平均分, 整数>,
+      "feedback": "<对该维度的总体评价>",
       "details": [
         {
-          "criteria": "匹配客户的沟通方式",
-          "score": 85,
-          "feedback": "具体分析和建议"
-        },
-        {
-          "criteria": "识别客户的沟通方式",
-          "score": 75,
-          "feedback": "具体分析和建议"
+          "id": "<criteria_id>",
+          "criteria": "<具体细则名称>",
+          "score": <该细则得分, 0-100的整数>,
+          "feedback": "<对该细则的具体分析和建议>",
+          "evidence": "<从对话中截取一段最能支撑你评分的原文，不超过50字，如果无相关对话则留空字符串>"
         }
-      ],
-      "feedback": "该维度总体评价"
+      ]
     }
   ],
   "suggestions": [
-    "具体改进建议1",
-    "具体改进建议2"
+    "<具体的、可操作的改进建议1>",
+    "<具体的、可操作的改进建议2>"
   ],
   "strengths": [
-    "表现优秀的方面1",
-    "表现优秀的方面2"
+    "<表现优秀、值得保持的方面1>",
+    "<表现优秀、值得保持的方面2>"
   ]
 }
+\`\`\`
 
-评分标准：90-100优秀，80-89良好，70-79中等，60-69及格，60以下不及格。反馈要具体、有建设性，并结合实际对话内容。`;
+### 评分指南
+-   **评分**: 90-100优秀, 80-89良好, 70-79中等, 60-69及格, 60以下不及格。
+-   **Feedback**: 必须具体、有建设性，并结合实际对话内容。
+-   **Evidence**: 必须是对话原文的直接引用，用于支撑你的评分。这是强制性的。
+-   **JSON有效性**: 确保返回的是一个可以被直接解析的、完整的JSON对象。`;
 
       const messages = [
         { role: 'user', content: evaluationPrompt }
@@ -471,7 +551,6 @@ ${conversation.map(msg => `${msg.role === 'student' ? '销售顾问' : '客户'}
         dimension: "本品维度", 
         score: 75,
         details: [
-          { criteria: "本品产品知识正确", score: 75, feedback: "产品知识基本准确，建议深入了解技术细节" },
           { criteria: "突出本产品的配置或者功能优势", score: 75, feedback: "能够介绍产品优势，但亮点展示不够突出" },
           { criteria: "清晰的确定客户的目标车型", score: 75, feedback: "对客户需求有基本了解，需要更精准的需求挖掘" }
         ],
@@ -523,6 +602,80 @@ ${conversation.map(msg => `${msg.role === 'student' ? '销售顾问' : '客户'}
       ],
       generatedAt: new Date()
     };
+  }
+  /**
+   * 生成智能优化的prompt - 集成保时捷客户类型系统
+   */
+  async generateOptimizedPrompt(taskConfig) {
+    try {
+      // 智能推荐最匹配的保时捷客户类型
+      let recommendedType = null;
+      let confidence = 0;
+      
+      if (taskConfig.customerProfession || taskConfig.customerPersonality?.length > 0 || taskConfig.customerFocus?.length > 0) {
+        try {
+          const recommendation = customerProfileService.recommendCustomerType({
+            profession: taskConfig.customerProfession,
+            personality: taskConfig.customerPersonality,
+            focusPoints: taskConfig.customerFocus,
+            communicationStyle: taskConfig.customerCommunication,
+            age: taskConfig.customerAge
+          });
+          
+          if (recommendation.confidence > 0.3) {
+            recommendedType = recommendation.recommendedType;
+            confidence = recommendation.confidence;
+            logger.info(`Auto-recommended customer type: ${recommendedType} (confidence: ${confidence})`);
+          }
+        } catch (error) {
+          logger.warn('Failed to auto-recommend customer type:', error);
+        }
+      }
+      
+      // 如果有推荐的客户类型，使用专业的客户类型提示词
+      if (recommendedType) {
+        try {
+          const optimizedPrompt = customerProfileService.generateCustomerTypePrompt(recommendedType, taskConfig);
+          
+          // 添加智能优化标识
+          const enhancedPrompt = `${optimizedPrompt}
+
+## 🤖 AI智能优化
+- 系统自动匹配客户类型：**${recommendedType}**
+- 匹配置信度：${Math.round(confidence * 100)}%
+- 该客户类型的特征已自动融入角色设定中
+
+---
+*本prompt已通过保时捷十大客户类型系统智能优化，提供更真实的客户行为模拟*`;
+
+          return enhancedPrompt;
+        } catch (error) {
+          logger.warn(`Failed to generate optimized prompt for ${recommendedType}:`, error);
+        }
+      }
+      
+      // 降级到基础prompt生成
+      const basicPrompt = this.generateCustomerPrompt(taskConfig);
+      
+      return `${basicPrompt}
+
+## 🤖 AI智能优化
+- 使用基础角色设定模式
+- 建议完善客户信息以获得更精准的角色匹配
+
+---
+*提示：填写更多客户信息可获得基于保时捷十大客户类型的智能优化*`;
+      
+    } catch (error) {
+      logger.error('Optimized prompt generation error:', error);
+      
+      // 错误时返回基础prompt
+      const fallbackPrompt = this.generateCustomerPrompt(taskConfig);
+      return `${fallbackPrompt}
+
+## ⚠️ 提示
+智能优化暂时不可用，使用基础角色设定模式。`;
+    }
   }
 }
 

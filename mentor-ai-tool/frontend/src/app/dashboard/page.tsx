@@ -2,10 +2,14 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import EvaluationDistributionChart from '@/components/EvaluationDistributionChart';
+import TaskCompletionTrendChart from '@/components/TaskCompletionTrendChart';
+import ChartModal from '@/components/ChartModal';
 
 export default function Dashboard() {
   const [selectedTimeRange, setSelectedTimeRange] = useState('本月');
   const [selectedLevel, setSelectedLevel] = useState('个人');
+  const [isChartModalOpen, setIsChartModalOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -120,28 +124,19 @@ export default function Dashboard() {
           {/* 主要图表区域 */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* 任务完成率趋势 */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">任务完成率趋势</h3>
-              <div className="h-64 flex items-center justify-center bg-gray-50 rounded">
-                <div className="text-center">
-                  <div className="text-4xl mb-2">📈</div>
-                  <p className="text-gray-500">完成率趋势图</p>
-                  <p className="text-sm text-gray-400 mt-2">显示{selectedTimeRange}的完成率变化</p>
-                </div>
-              </div>
-            </div>
+            <TaskCompletionTrendChart
+              timeRange={selectedTimeRange}
+              onViewLarge={() => {
+                // 在这里可以处理打开大图模态框的逻辑
+                // 例如: setModalContent(<TaskCompletionTrendChart timeRange={selectedTimeRange} isLargeView />); setIsChartModalOpen(true);
+                alert('打开大图功能待实现');
+              }}
+            />
 
             {/* 评价度分布 */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">评价度分布</h3>
-              <div className="h-64 flex items-center justify-center bg-gray-50 rounded">
-                <div className="text-center">
-                  <div className="text-4xl mb-2">🎯</div>
-                  <p className="text-gray-500">评价度分布图</p>
-                  <p className="text-sm text-gray-400 mt-2">AI评分 vs Mentor评分对比</p>
-                </div>
-              </div>
-            </div>
+            <EvaluationDistributionChart 
+              onViewLarge={() => setIsChartModalOpen(true)}
+            />
           </div>
 
           {/* 详细数据表格和排行榜 */}
@@ -343,6 +338,17 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+
+      {/* 图表大图模态框 */}
+      <ChartModal
+        isOpen={isChartModalOpen}
+        onClose={() => setIsChartModalOpen(false)}
+        title="评价度分布图 - 详细视图"
+      >
+        <EvaluationDistributionChart 
+          isLargeView={true}
+        />
+      </ChartModal>
     </div>
   );
 }

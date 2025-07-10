@@ -1,7 +1,7 @@
 // 测试AI对话集成的简单脚本
 const axios = require('axios');
 
-const BACKEND_URL = 'http://localhost:5000';
+const BACKEND_URL = 'http://localhost:6100';
 
 // 测试配置
 const testTaskConfig = {

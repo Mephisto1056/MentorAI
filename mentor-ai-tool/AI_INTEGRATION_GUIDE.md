@@ -160,7 +160,7 @@ tail -f mentor-ai-tool/backend/logs/combined.log
 
 ### 健康检查
 ```bash
-curl http://localhost:5000/health
+curl http://localhost:6100/health
 ```
 
 ## 🚨 故障排除
