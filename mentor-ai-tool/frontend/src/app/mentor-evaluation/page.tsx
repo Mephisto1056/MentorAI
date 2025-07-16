@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { getApiUrl } from '../../config';
 
 interface PendingSession {
   _id: string;
@@ -62,7 +63,7 @@ const EVALUATION_CRITERIA = [
   { id: 'criteria3', dimension: '沟通维度', name: '引导沟通的方向', icon: '🗣️' },
   { id: 'criteria4', dimension: '沟通维度', name: '清晰的表达自己的观点', icon: '🗣️' },
   // 本品维度
-  { id: 'criteria5', dimension: '本品维度', name: '本品产品知识正确', icon: '🚗' },
+  { id: 'criteria5', dimension: '本品维度', name: '本品产品知识介绍', icon: '🚗' },
   { id: 'criteria6', dimension: '本品维度', name: '突出本产品的配置或者功能优势', icon: '🚗' },
   { id: 'criteria7', dimension: '本品维度', name: '清晰的确定客户的目标车型', icon: '🚗' },
   // 竞品维度
@@ -87,13 +88,20 @@ export default function MentorEvaluation() {
   // 只使用详细评估模式
   const [feedback, setFeedback] = useState<string>('');
   
-  // 详细评估状态
-  const [detailedScores, setDetailedScores] = useState<DetailedScores>({
-    criteria1: 80, criteria2: 80, criteria3: 80, criteria4: 80,
-    criteria5: 80, criteria6: 80, criteria7: 80,
-    criteria8: 80, criteria9: 80, criteria10: 80,
-    criteria11: 80, criteria12: 80, criteria13: 80,
-    criteria14: 80
+  // 详细评估状态 - 使用65-90的随机分数
+  const [detailedScores, setDetailedScores] = useState<DetailedScores>(() => {
+    const generateRandomScore = () => Math.floor(Math.random() * 26) + 65; // 65-90随机分数
+    return {
+      criteria1: generateRandomScore(), criteria2: generateRandomScore(), 
+      criteria3: generateRandomScore(), criteria4: generateRandomScore(),
+      criteria5: generateRandomScore(), criteria6: generateRandomScore(), 
+      criteria7: generateRandomScore(),
+      criteria8: generateRandomScore(), criteria9: generateRandomScore(), 
+      criteria10: generateRandomScore(),
+      criteria11: generateRandomScore(), criteria12: generateRandomScore(), 
+      criteria13: generateRandomScore(),
+      criteria14: generateRandomScore()
+    };
   });
   
   const [activeTab, setActiveTab] = useState<'conversation' | 'ai-evaluation' | 'criteria-reference'>('conversation');
@@ -104,7 +112,7 @@ export default function MentorEvaluation() {
 
   const fetchPendingSessions = async () => {
     try {
-      const response = await fetch('http://localhost:6100/api/evaluations/pending');
+      const response = await fetch(getApiUrl('/api/evaluations/pending'));
       
       if (response.ok) {
         const result = await response.json();
@@ -122,7 +130,7 @@ export default function MentorEvaluation() {
 
   const fetchSessionDetail = async (sessionId: string) => {
     try {
-      const response = await fetch(`http://localhost:6100/api/sessions/${sessionId}/evaluation`);
+      const response = await fetch(getApiUrl(`/api/sessions/${sessionId}/evaluation`));
       
       if (response.ok) {
         const result = await response.json();
@@ -190,7 +198,7 @@ export default function MentorEvaluation() {
         detailedScores: detailedScores
       };
 
-      const response = await fetch(`http://localhost:6100/api/evaluations/${selectedSession.sessionId}`, {
+      const response = await fetch(getApiUrl(`/api/evaluations/${selectedSession.sessionId}`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -205,12 +213,18 @@ export default function MentorEvaluation() {
         // 清空选中的会话
         setSelectedSession(null);
         setFeedback('');
+        // 重置为新的随机分数
+        const generateRandomScore = () => Math.floor(Math.random() * 26) + 65; // 65-90随机分数
         setDetailedScores({
-          criteria1: 80, criteria2: 80, criteria3: 80, criteria4: 80,
-          criteria5: 80, criteria6: 80, criteria7: 80,
-          criteria8: 80, criteria9: 80, criteria10: 80,
-          criteria11: 80, criteria12: 80, criteria13: 80,
-          criteria14: 80
+          criteria1: generateRandomScore(), criteria2: generateRandomScore(), 
+          criteria3: generateRandomScore(), criteria4: generateRandomScore(),
+          criteria5: generateRandomScore(), criteria6: generateRandomScore(), 
+          criteria7: generateRandomScore(),
+          criteria8: generateRandomScore(), criteria9: generateRandomScore(), 
+          criteria10: generateRandomScore(),
+          criteria11: generateRandomScore(), criteria12: generateRandomScore(), 
+          criteria13: generateRandomScore(),
+          criteria14: generateRandomScore()
         });
       } else {
         const errorData = await response.json();

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { getApiUrl } from '../../config';
 
 interface CustomerType {
   name: string;
@@ -121,7 +122,7 @@ export default function TaskGenerator(): React.JSX.Element {
     const loadCustomerTypes = async () => {
       setIsLoadingTypes(true);
       try {
-        const response = await fetch('http://localhost:6100/api/customer-types');
+        const response = await fetch(getApiUrl('/api/customer-types'));
         if (response.ok) {
           const data = await response.json();
           setCustomerTypes(data.data || []);
@@ -145,7 +146,7 @@ export default function TaskGenerator(): React.JSX.Element {
   // 智能推荐客户类型
   const recommendCustomerType = async () => {
     try {
-      const response = await fetch('http://localhost:6100/api/customer-types/recommend', {
+      const response = await fetch(getApiUrl('/api/customer-types/recommend'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -172,7 +173,7 @@ export default function TaskGenerator(): React.JSX.Element {
   // 应用客户类型配置
   const applyCustomerType = async (customerType: string) => {
     try {
-      const response = await fetch(`http://localhost:6100/api/customer-types/${encodeURIComponent(customerType)}/config`);
+      const response = await fetch(getApiUrl(`/api/customer-types/${encodeURIComponent(customerType)}/config`));
       if (response.ok) {
         const data = await response.json();
         const config = data.data;
@@ -198,7 +199,7 @@ export default function TaskGenerator(): React.JSX.Element {
   const generatePrompt = async () => {
     try {
       // 调用后端API生成智能优化的prompt
-      const response = await fetch('http://localhost:6100/api/ai/generate-prompt', {
+      const response = await fetch(getApiUrl('/api/ai/generate-prompt'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

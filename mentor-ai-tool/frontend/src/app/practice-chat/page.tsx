@@ -7,6 +7,7 @@ import { io, Socket } from 'socket.io-client';
 import VoiceController from '../../components/VoiceController';
 import VoiceInput from '../../components/VoiceInput';
 import VoicePlayer from '../../components/VoicePlayer';
+import { getApiUrl, SOCKET_CONFIG } from '../../config';
 
 export default function PracticeChat() {
   const searchParams = useSearchParams();
@@ -43,7 +44,7 @@ export default function PracticeChat() {
   // 初始化WebSocket连接
   useEffect(() => {
     const initializeSocket = () => {
-      const socket = io('http://localhost:6100');
+      const socket = io(SOCKET_CONFIG.URL, SOCKET_CONFIG.OPTIONS);
       socketRef.current = socket;
 
       socket.on('connect', () => {
@@ -96,7 +97,12 @@ export default function PracticeChat() {
           config = JSON.parse(decodeURIComponent(configParam));
         } catch (decodeError) {
           console.warn('配置参数解码失败，尝试直接解析:', decodeError);
-          config = JSON.parse(configParam);
+          try {
+            config = JSON.parse(configParam);
+          } catch (parseError) {
+            console.error('配置参数解析完全失败:', parseError);
+            throw parseError;
+          }
         }
         
         // 安全地解码prompt参数
@@ -109,6 +115,9 @@ export default function PracticeChat() {
             prompt = promptParam;
           }
         }
+        
+        console.log('成功解析配置:', config);
+        console.log('成功解析prompt:', prompt.substring(0, 100) + '...');
         
         setTaskConfig(config);
         setAiPrompt(prompt);
@@ -212,7 +221,7 @@ export default function PracticeChat() {
   // 创建练习会话
   const createPracticeSession = async (config: any, prompt: string) => {
     try {
-      const response = await fetch('http://localhost:6100/api/sessions', {
+      const response = await fetch(getApiUrl('/api/sessions'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -329,8 +338,11 @@ export default function PracticeChat() {
   // 生成AI语音响应（支持语音功能）
   const generateAIVoiceResponse = async (userMessage: string) => {
     try {
+      console.log('生成AI响应，使用的配置:', taskConfig);
+      console.log('生成AI响应，使用的prompt:', aiPrompt?.substring(0, 200) + '...');
+      
       // 始终使用语音响应API，让后端决定是否生成语音
-      const response = await fetch('http://localhost:6100/api/ai/generate-voice-response', {
+      const response = await fetch(getApiUrl('/api/ai/generate-voice-response'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -448,7 +460,7 @@ export default function PracticeChat() {
         console.log('Creating real session for evaluation...');
         
         // 创建真实会话
-        const createResponse = await fetch('http://localhost:6100/api/sessions', {
+        const createResponse = await fetch(getApiUrl('/api/sessions'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -476,7 +488,7 @@ export default function PracticeChat() {
           // 将对话记录添加到真实会话中
           for (const message of messages) {
             try {
-              await fetch(`http://localhost:6100/api/sessions/${realSessionId}/messages`, {
+              await fetch(getApiUrl(`/api/sessions/${realSessionId}/messages`), {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -495,7 +507,7 @@ export default function PracticeChat() {
           setSessionId(realSessionId);
           
           // 提交真实会话
-          const submitResponse = await fetch(`http://localhost:6100/api/sessions/${realSessionId}/submit`, {
+          const submitResponse = await fetch(getApiUrl(`/api/sessions/${realSessionId}/submit`), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -514,7 +526,7 @@ export default function PracticeChat() {
         }
       } else {
         // 正常提交已存在的会话
-        const response = await fetch(`http://localhost:6100/api/sessions/${sessionId}/submit`, {
+        const response = await fetch(getApiUrl(`/api/sessions/${sessionId}/submit`), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -550,10 +562,12 @@ export default function PracticeChat() {
   };
 
   const restartSession = () => {
+    // 使用当前配置重新生成初始消息，而不是硬编码
+    const initialMessage = taskConfig ? generateInitialMessage(taskConfig) : '您好！我对您的产品很感兴趣，请为我介绍一下。';
     setMessages([
       { 
         role: 'ai', 
-        content: '您好！我是李先生，一位金融分析师。我最近在考虑购买一辆保时捷991-2，听说这款车的性能很不错。不过我也在看小米SU7，想了解一下两者的区别。',
+        content: initialMessage,
         timestamp: new Date()
       }
     ]);
@@ -696,13 +710,26 @@ export default function PracticeChat() {
                     <span className="text-xs font-medium text-gray-700">快速回复：</span>
                   </div>
                   <div className="flex flex-wrap gap-2 mb-3">
-                    {[
-                      '您对动力性能有什么具体要求吗？',
-                      '我来为您详细介绍一下991-2的配置优势',
-                      '相比小米SU7，保时捷在品牌价值方面...',
-                      '您平时主要在什么场景下用车？',
-                      '我们现在有很好的金融政策...'
-                    ].map((quickReply, index) => (
+                    {(() => {
+                      // 根据任务配置动态生成快速回复
+                      const baseReplies = [
+                        '您平时主要在什么场景下用车？',
+                        '我们现在有很好的金融政策...'
+                      ];
+                      
+                      const taskGoal = taskConfig?.taskGoal || '991-2产品介绍';
+                      const interestedVehicle = taskConfig?.interestedVehicle || '991-2';
+                      const competitorInterested = taskConfig?.competitorInterested || '小米SU7';
+                      const customerFocus = taskConfig?.customerFocus || ['动力'];
+                      
+                      const dynamicReplies = [
+                        `您对${customerFocus[0] || '动力'}性能有什么具体要求吗？`,
+                        `我来为您详细介绍一下${interestedVehicle}的配置优势`,
+                        `相比${competitorInterested}，保时捷在品牌价值方面...`
+                      ];
+                      
+                      return [...dynamicReplies, ...baseReplies];
+                    })().map((quickReply, index) => (
                       <button
                         key={index}
                         onClick={() => setInputMessage(quickReply)}
@@ -833,18 +860,75 @@ export default function PracticeChat() {
                 </div>
                 {isRealTimeTipsExpanded && (
                   <div className="px-4 pb-4 space-y-2 text-sm border-t border-gray-100">
-                    <div className="p-2 bg-yellow-50 border-l-4 border-yellow-400">
-                      <p className="text-yellow-800">💡 客户关注残值率，可以重点介绍保时捷的保值性</p>
-                    </div>
-                    <div className="p-2 bg-blue-50 border-l-4 border-blue-400">
-                      <p className="text-blue-800">📊 使用FAB技巧：特征→优势→利益</p>
-                    </div>
-                    <div className="p-2 bg-green-50 border-l-4 border-green-400">
-                      <p className="text-green-800">✅ 已识别客户D型性格，保持直接高效的沟通</p>
-                    </div>
-                    <div className="p-2 bg-purple-50 border-l-4 border-purple-400">
-                      <p className="text-purple-800">🎯 建议询问客户具体用车场景</p>
-                    </div>
+                    {(() => {
+                      const tips = [];
+                      const customerFocus = taskConfig?.customerFocus || [];
+                      const methodology = taskConfig?.methodology || 'FAB产品介绍技巧';
+                      const customerCommunication = taskConfig?.customerCommunication || 'D控制型';
+                      const competitorInterested = taskConfig?.competitorInterested;
+                      
+                      // 根据客户关注点生成提示
+                      if (customerFocus.includes('残值')) {
+                        tips.push(
+                          <div key="residual" className="p-2 bg-yellow-50 border-l-4 border-yellow-400">
+                            <p className="text-yellow-800">💡 客户关注残值率，可以重点介绍保时捷的保值性</p>
+                          </div>
+                        );
+                      }
+                      if (customerFocus.includes('动力')) {
+                        tips.push(
+                          <div key="power" className="p-2 bg-red-50 border-l-4 border-red-400">
+                            <p className="text-red-800">🚗 客户关注动力性能，可以详细介绍发动机参数和加速表现</p>
+                          </div>
+                        );
+                      }
+                      if (customerFocus.includes('智能化')) {
+                        tips.push(
+                          <div key="tech" className="p-2 bg-indigo-50 border-l-4 border-indigo-400">
+                            <p className="text-indigo-800">📱 客户关注智能化配置，可以展示科技功能和互联体验</p>
+                          </div>
+                        );
+                      }
+                      
+                      // 根据方法论生成提示
+                      tips.push(
+                        <div key="methodology" className="p-2 bg-blue-50 border-l-4 border-blue-400">
+                          <p className="text-blue-800">📊 使用{methodology}：{methodology === 'FAB产品介绍技巧' ? '特征→优势→利益' : methodology === 'SPIN销售法' ? '情况→问题→影响→需求回报' : '系统化销售流程'}</p>
+                        </div>
+                      );
+                      
+                      // 根据沟通方式生成提示
+                      const communicationTips: { [key: string]: string } = {
+                        'D控制型': '已识别客户D型性格，保持直接高效的沟通',
+                        'I影响型': '已识别客户I型性格，多用案例和故事进行沟通',
+                        'C遵循型': '已识别客户C型性格，提供详细数据和逻辑分析',
+                        'S稳定型': '已识别客户S型性格，保持耐心和稳定的沟通节奏'
+                      };
+                      
+                      tips.push(
+                        <div key="communication" className="p-2 bg-green-50 border-l-4 border-green-400">
+                          <p className="text-green-800">✅ {communicationTips[customerCommunication] || '根据客户性格调整沟通方式'}</p>
+                        </div>
+                      );
+                      
+                      // 根据竞品生成提示
+                      if (competitorInterested) {
+                        tips.push(
+                          <div key="competitor" className="p-2 bg-orange-50 border-l-4 border-orange-400">
+                            <p className="text-orange-800">🔄 客户考虑{competitorInterested}，准备差异化对比分析</p>
+                          </div>
+                        );
+                      }
+                      
+                      // 通用提示
+                      tips.push(
+                        <div key="general" className="p-2 bg-purple-50 border-l-4 border-purple-400">
+                          <p className="text-purple-800">🎯 建议询问客户具体用车场景</p>
+                        </div>
+                      );
+                      
+                      return tips;
+                    })()}
                   </div>
                 )}
               </div>

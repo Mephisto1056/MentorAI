@@ -29,11 +29,35 @@ const socketHandler = require('./services/socketService');
 
 const app = express();
 const server = createServer(app);
+// Socket.IO CORS configuration for external access
+const socketCorsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin
+    if (!origin) return callback(null, true);
+    
+    // Get allowed origins from environment variable or use defaults
+    const allowedOrigins = process.env.FRONTEND_URL 
+      ? process.env.FRONTEND_URL.split(',')
+      : ["http://localhost:3000"];
+    
+    // Check if the origin is in the allowed list
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      // For development, allow any localhost origin
+      if (process.env.NODE_ENV !== 'production' && origin.includes('localhost')) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    }
+  },
+  methods: ["GET", "POST"],
+  credentials: true
+};
+
 const io = new Server(server, {
-  cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
-    methods: ["GET", "POST"]
-  }
+  cors: socketCorsOptions
 });
 
 // Connect to MongoDB
@@ -41,10 +65,36 @@ connectDB();
 
 // Security middleware
 app.use(helmet());
-app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
-  credentials: true
-}));
+
+// CORS configuration for external access
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Get allowed origins from environment variable or use defaults
+    const allowedOrigins = process.env.FRONTEND_URL 
+      ? process.env.FRONTEND_URL.split(',')
+      : ["http://localhost:3000"];
+    
+    // Check if the origin is in the allowed list
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      // For development, allow any localhost origin
+      if (process.env.NODE_ENV !== 'production' && origin.includes('localhost')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+};
+
+app.use(cors(corsOptions));
 
 // Rate limiting
 const limiter = rateLimit({

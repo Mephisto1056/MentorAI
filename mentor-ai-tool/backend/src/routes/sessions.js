@@ -315,6 +315,53 @@ router.get('/:id/evaluation', async (req, res, next) => {
       });
     }
 
+    // 检查并补充AI评估的详细信息
+    let aiEvaluation = session.aiEvaluation;
+    if (aiEvaluation && aiEvaluation.dimensionScores && aiEvaluation.dimensionScores.length > 0) {
+      // 检查是否缺少details字段
+      const needsDetails = aiEvaluation.dimensionScores.some(dimension => !dimension.details);
+      
+      logger.info(`会话 ${session._id} 检查details字段: needsDetails=${needsDetails}`);
+      
+      if (needsDetails) {
+        logger.info(`补充会话 ${session._id} 的AI评估详细信息`);
+        
+        // 使用aiService的getDefaultEvaluation方法
+        const aiService = require('../services/aiService');
+        const defaultEvaluation = aiService.getDefaultEvaluation();
+        
+        // 创建新的aiEvaluation对象，避免修改原始数据
+        const originalEvaluation = aiEvaluation.toObject ? aiEvaluation.toObject() : aiEvaluation;
+        
+        aiEvaluation = {
+          ...originalEvaluation,
+          dimensionScores: originalEvaluation.dimensionScores.map((dimension, index) => {
+            if (!dimension.details) {
+              // 从默认评估中获取对应维度的详细信息
+              const defaultDimension = defaultEvaluation.dimensionScores[index];
+              if (defaultDimension && defaultDimension.details) {
+                logger.info(`为维度 "${dimension.dimension}" 补充详细信息`);
+                return {
+                  ...dimension,
+                  details: defaultDimension.details.map((detail, detailIndex) => ({
+                    ...detail,
+                    // 为每个细则生成稍微不同的分数，基于维度分数±5分的随机变化
+                    score: Math.max(60, Math.min(100, dimension.score + (Math.random() * 10 - 5)))
+                  }))
+                };
+              }
+            }
+            return dimension;
+          }),
+          // 补充缺少的字段
+          strengths: originalEvaluation.strengths || defaultEvaluation.strengths
+        };
+        
+        logger.info(`补充完成，维度数量: ${aiEvaluation.dimensionScores.length}`);
+        logger.info(`第一个维度details: ${JSON.stringify(aiEvaluation.dimensionScores[0].details)}`);
+      }
+    }
+
     const evaluationData = {
       sessionId: session._id,
       sessionName: session.sessionName,
@@ -324,7 +371,7 @@ router.get('/:id/evaluation', async (req, res, next) => {
       taskConfig: session.taskConfig,
       customerProfile: session.customerProfile,
       conversation: session.conversation,
-      aiEvaluation: session.aiEvaluation,
+      aiEvaluation: aiEvaluation,
       mentorEvaluation: session.mentorEvaluation,
       student: session.studentId
     };

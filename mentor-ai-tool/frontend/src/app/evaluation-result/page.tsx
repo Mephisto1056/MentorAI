@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { getApiUrl } from '../../config';
 
 interface CriteriaDetail {
   criteria: string;
@@ -73,7 +74,7 @@ export default function EvaluationResult() {
 
   const fetchEvaluationData = async (id: string) => {
     try {
-      const response = await fetch(`http://localhost:6100/api/sessions/${id}/evaluation`);
+      const response = await fetch(getApiUrl(`/api/sessions/${id}/evaluation`));
       
       if (response.ok) {
         const result = await response.json();

@@ -38,11 +38,12 @@ router.post('/generate-response', async (req, res) => {
       age: taskConfig.customerAge
     };
 
-    // 生成AI响应
+    // 生成AI响应 - 如果有aiPrompt就直接使用，否则用taskConfig生成
     const aiResponse = await aiService.generateCustomerResponse(
       conversation,
       customerProfile,
-      taskConfig
+      taskConfig,
+      aiPrompt // 传递前端生成的prompt
     );
 
     res.json({
@@ -111,12 +112,13 @@ router.post('/generate-voice-response', async (req, res) => {
       age: taskConfig.customerAge
     };
 
-    // 生成AI语音响应
+    // 生成AI语音响应 - 如果有aiPrompt就直接使用，否则用taskConfig生成
     const voiceResponse = await aiService.generateCustomerVoiceResponse(
       conversation,
       customerProfile,
       taskConfig,
-      enableVoice
+      enableVoice,
+      aiPrompt // 传递前端生成的prompt
     );
 
     res.json({
