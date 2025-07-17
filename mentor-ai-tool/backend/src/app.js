@@ -85,7 +85,17 @@ const corsOptions = {
       if (process.env.NODE_ENV !== 'production' && origin.includes('localhost')) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        // For production, allow same IP with different ports (3000 and 6100)
+        const originUrl = new URL(origin);
+        const allowedUrl = new URL(process.env.FRONTEND_URL || 'http://localhost:3000');
+        
+        if (originUrl.hostname === allowedUrl.hostname && 
+            (originUrl.port === '3000' || originUrl.port === '6100')) {
+          callback(null, true);
+        } else {
+          console.log(`CORS blocked origin: ${origin}, allowed: ${process.env.FRONTEND_URL}`);
+          callback(new Error('Not allowed by CORS'));
+        }
       }
     }
   },
