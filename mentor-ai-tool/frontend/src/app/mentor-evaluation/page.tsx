@@ -92,23 +92,34 @@ export default function MentorEvaluation() {
   // 只使用详细评估模式
   const [feedback, setFeedback] = useState<string>('');
   
-  // 详细评估状态 - 使用65-90的随机分数
+  // 详细评估状态 - 默认60分
   const [detailedScores, setDetailedScores] = useState<DetailedScores>(() => {
-    const generateRandomScore = () => Math.floor(Math.random() * 26) + 65; // 65-90随机分数
     return {
-      criteria1: generateRandomScore(), criteria2: generateRandomScore(), 
-      criteria3: generateRandomScore(), criteria4: generateRandomScore(),
-      criteria5: generateRandomScore(), criteria6: generateRandomScore(), 
-      criteria7: generateRandomScore(),
-      criteria8: generateRandomScore(), criteria9: generateRandomScore(), 
-      criteria10: generateRandomScore(),
-      criteria11: generateRandomScore(), criteria12: generateRandomScore(), 
-      criteria13: generateRandomScore(),
-      criteria14: generateRandomScore()
+      criteria1: 60, criteria2: 60, criteria3: 60, criteria4: 60,
+      criteria5: 60, criteria6: 60, criteria7: 60,
+      criteria8: 60, criteria9: 60, criteria10: 60,
+      criteria11: 60, criteria12: 60, criteria13: 60,
+      criteria14: 60
     };
   });
   
+  // 跟踪用户是否手动修改过分数
+  const [userModifiedScores, setUserModifiedScores] = useState<Set<string>>(new Set());
+  
   const [activeTab, setActiveTab] = useState<'conversation' | 'ai-evaluation' | 'criteria-reference'>('conversation');
+  
+  // 添加弹窗状态
+  const [showAICompletedModal, setShowAICompletedModal] = useState(false);
+  const [aiCompletedSessionId, setAiCompletedSessionId] = useState<string | null>(null);
+  
+  // 记录已显示过弹窗的会话ID
+  const [shownModalSessions, setShownModalSessions] = useState<Set<string>>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('ai-evaluation-shown-modals');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    }
+    return new Set();
+  });
 
   useEffect(() => {
     fetchPendingSessions();
@@ -117,7 +128,7 @@ export default function MentorEvaluation() {
     // 设置定期刷新待评估列表，以更新AI评估状态
     const refreshInterval = setInterval(() => {
       fetchPendingSessions();
-    }, 10000); // 每10秒刷新一次
+    }, 30000); // 每30秒刷新一次，减少请求频率
     
     return () => clearInterval(refreshInterval);
   }, []);
@@ -126,15 +137,31 @@ export default function MentorEvaluation() {
   useEffect(() => {
     if (selectedSession?.sessionId) {
       checkAIEvaluationStatus(selectedSession.sessionId);
-      
-      // 如果AI评估正在进行中，设置定时器检查状态
-      const interval = setInterval(() => {
-        checkAIEvaluationStatus(selectedSession.sessionId);
-      }, 3000); // 每3秒检查一次
-
-      return () => clearInterval(interval);
     }
   }, [selectedSession?.sessionId]);
+
+  // 单独的轮询效果，只在需要时启动
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    
+    // 只有当选中会话且AI评估状态为进行中或待处理时才启动轮询
+    if (selectedSession?.sessionId && 
+        (aiEvaluationStatus === 'in_progress' || aiEvaluationStatus === 'pending')) {
+      console.log(`🔄 启动AI状态轮询: ${aiEvaluationStatus}`);
+      interval = setInterval(() => {
+        checkAIEvaluationStatus(selectedSession.sessionId);
+      }, 5000); // 每5秒检查一次
+    } else {
+      console.log(`⏹️ 停止AI状态轮询: ${aiEvaluationStatus}`);
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+        console.log('🛑 清理轮询定时器');
+      }
+    };
+  }, [selectedSession?.sessionId, aiEvaluationStatus]);
 
   const fetchPendingSessions = async () => {
     try {
@@ -144,6 +171,10 @@ export default function MentorEvaluation() {
         const result = await response.json();
         setPendingSessions(result.data || []);
         setError(null); // 清除之前的错误
+      } else if (response.status === 429) {
+        console.warn('请求过于频繁，稍后重试');
+        // 429错误时不清空现有数据，保持用户体验
+        setError(null);
       } else {
         console.warn('获取待评估会话失败，使用空列表');
         setPendingSessions([]); // 设置为空数组而不是显示错误
@@ -167,10 +198,13 @@ export default function MentorEvaluation() {
         const result = await response.json();
         setEvaluatedSessions(result.data || []);
       } else {
-        console.error('获取已评估会话失败');
+        console.warn('获取已评估会话失败，使用空列表');
+        setEvaluatedSessions([]); // 设置为空数组而不是显示错误
       }
     } catch (err) {
       console.error('Fetch evaluated sessions error:', err);
+      console.warn('网络错误，使用空列表');
+      setEvaluatedSessions([]); // 设置为空数组而不是显示错误
     }
   };
 
@@ -186,56 +220,60 @@ export default function MentorEvaluation() {
         // 设置AI评估状态
         setAiEvaluationStatus(result.data.aiEvaluationStatus || 'unknown');
         
-        // 如果有AI评估，设置详细评分的初始值
+        // 根据新规则设置详细评分的初始值
         if (result.data.aiEvaluation?.dimensionScores) {
+          // AI已经给出评分，使用AI评分
           const aiScores = result.data.aiEvaluation.dimensionScores;
           const newDetailedScores = { ...detailedScores };
           
-          // 根据AI评估的具体标准分数设置初始值
+          // 根据AI评估的具体标准分数设置初始值，但只更新用户未手动修改过的分数
           aiScores.forEach((dimension: any) => {
             if (dimension.details && dimension.details.length > 0) {
               // 使用具体标准的分数
               dimension.details.forEach((detail: any) => {
                 if (detail.id && typeof detail.score === 'number') {
                   const criteriaKey = detail.id as keyof DetailedScores;
-                  if (criteriaKey in newDetailedScores) {
+                  if (criteriaKey in newDetailedScores && !userModifiedScores.has(criteriaKey)) {
                     newDetailedScores[criteriaKey] = Math.round(detail.score);
                   }
                 }
               });
             } else {
               // 如果没有详细分数，使用维度分数作为默认值
-              const score = Math.round(dimension.score || 75);
+              const score = Math.round(dimension.score || 60);
               switch (dimension.dimension) {
                 case '沟通维度':
-                  newDetailedScores.criteria1 = score;
-                  newDetailedScores.criteria2 = score;
-                  newDetailedScores.criteria3 = score;
-                  newDetailedScores.criteria4 = score;
+                  if (!userModifiedScores.has('criteria1')) newDetailedScores.criteria1 = score;
+                  if (!userModifiedScores.has('criteria2')) newDetailedScores.criteria2 = score;
+                  if (!userModifiedScores.has('criteria3')) newDetailedScores.criteria3 = score;
+                  if (!userModifiedScores.has('criteria4')) newDetailedScores.criteria4 = score;
                   break;
                 case '本品维度':
-                  newDetailedScores.criteria5 = score;
-                  newDetailedScores.criteria6 = score;
-                  newDetailedScores.criteria7 = score;
+                  if (!userModifiedScores.has('criteria5')) newDetailedScores.criteria5 = score;
+                  if (!userModifiedScores.has('criteria6')) newDetailedScores.criteria6 = score;
+                  if (!userModifiedScores.has('criteria7')) newDetailedScores.criteria7 = score;
                   break;
                 case '竞品维度':
-                  newDetailedScores.criteria8 = score;
-                  newDetailedScores.criteria9 = score;
-                  newDetailedScores.criteria10 = score;
+                  if (!userModifiedScores.has('criteria8')) newDetailedScores.criteria8 = score;
+                  if (!userModifiedScores.has('criteria9')) newDetailedScores.criteria9 = score;
+                  if (!userModifiedScores.has('criteria10')) newDetailedScores.criteria10 = score;
                   break;
                 case '客户信息获取维度':
-                  newDetailedScores.criteria11 = score;
-                  newDetailedScores.criteria12 = score;
-                  newDetailedScores.criteria13 = score;
+                  if (!userModifiedScores.has('criteria11')) newDetailedScores.criteria11 = score;
+                  if (!userModifiedScores.has('criteria12')) newDetailedScores.criteria12 = score;
+                  if (!userModifiedScores.has('criteria13')) newDetailedScores.criteria13 = score;
                   break;
                 case '方法论匹配度':
-                  newDetailedScores.criteria14 = score;
+                  if (!userModifiedScores.has('criteria14')) newDetailedScores.criteria14 = score;
                   break;
               }
             }
           });
           
           setDetailedScores(newDetailedScores);
+        } else {
+          // AI还没有给出评分，保持默认60分（除非用户已经手动修改过）
+          // 这里不需要做任何操作，因为初始状态已经是60分
         }
       } else {
         setError('获取会话详情失败');
@@ -252,17 +290,55 @@ export default function MentorEvaluation() {
       
       if (response.ok) {
         const result = await response.json();
-        const status = result.data.aiEvaluationStatus;
-        setAiEvaluationStatus(status);
+        const newStatus = result.data.aiEvaluationStatus;
         
-        // 如果AI评估完成，重新获取会话详情以更新AI评估结果
-        if (status === 'completed' && aiEvaluationStatus === 'in_progress') {
-          fetchSessionDetail(sessionId);
+        console.log(`AI评估状态检查: ${aiEvaluationStatus} -> ${newStatus}`);
+        
+        // 只有当AI评估从非完成状态变为完成状态，且该会话未显示过弹窗时，才显示弹窗
+        if (newStatus === 'completed' && 
+            aiEvaluationStatus !== 'completed' && 
+            aiEvaluationStatus !== 'unknown' &&
+            !shownModalSessions.has(sessionId)) {
+          console.log('🎉 AI评估完成，显示弹窗！');
+          setAiCompletedSessionId(sessionId);
+          setShowAICompletedModal(true);
+          
+          // 记录该会话已显示过弹窗
+          const newShownSessions = new Set(shownModalSessions).add(sessionId);
+          setShownModalSessions(newShownSessions);
+          localStorage.setItem('ai-evaluation-shown-modals', JSON.stringify([...newShownSessions]));
+          
+          // 刷新待评估列表
+          fetchPendingSessions();
         }
+        
+        setAiEvaluationStatus(newStatus);
       }
     } catch (err) {
       console.error('Check AI evaluation status error:', err);
     }
+  };
+
+  // 测试弹窗功能
+  const testModal = () => {
+    console.log('测试弹窗');
+    setAiCompletedSessionId(selectedSession?.sessionId || 'test');
+    setShowAICompletedModal(true);
+  };
+
+  // 处理AI完成弹窗的刷新操作
+  const handleRefreshAfterAICompleted = async () => {
+    if (aiCompletedSessionId) {
+      await fetchSessionDetail(aiCompletedSessionId);
+    }
+    setShowAICompletedModal(false);
+    setAiCompletedSessionId(null);
+  };
+
+  // 关闭弹窗但不刷新
+  const handleCloseAICompletedModal = () => {
+    setShowAICompletedModal(false);
+    setAiCompletedSessionId(null);
   };
 
   const submitEvaluation = async () => {
@@ -294,19 +370,16 @@ export default function MentorEvaluation() {
         // 清空选中的会话
         setSelectedSession(null);
         setFeedback('');
-        // 重置为新的随机分数
-        const generateRandomScore = () => Math.floor(Math.random() * 26) + 65; // 65-90随机分数
+        // 重置为默认60分
         setDetailedScores({
-          criteria1: generateRandomScore(), criteria2: generateRandomScore(), 
-          criteria3: generateRandomScore(), criteria4: generateRandomScore(),
-          criteria5: generateRandomScore(), criteria6: generateRandomScore(), 
-          criteria7: generateRandomScore(),
-          criteria8: generateRandomScore(), criteria9: generateRandomScore(), 
-          criteria10: generateRandomScore(),
-          criteria11: generateRandomScore(), criteria12: generateRandomScore(), 
-          criteria13: generateRandomScore(),
-          criteria14: generateRandomScore()
+          criteria1: 60, criteria2: 60, criteria3: 60, criteria4: 60,
+          criteria5: 60, criteria6: 60, criteria7: 60,
+          criteria8: 60, criteria9: 60, criteria10: 60,
+          criteria11: 60, criteria12: 60, criteria13: 60,
+          criteria14: 60
         });
+        // 清空用户修改记录
+        setUserModifiedScores(new Set());
       } else {
         const errorData = await response.json();
         alert('提交失败: ' + (errorData.error || '未知错误'));
@@ -338,6 +411,8 @@ export default function MentorEvaluation() {
       ...prev,
       [criteriaId]: score
     }));
+    // 标记该分数已被用户手动修改
+    setUserModifiedScores(prev => new Set(prev).add(criteriaId));
   };
 
   // 批量设置分数
@@ -1049,6 +1124,46 @@ export default function MentorEvaluation() {
           </div>
         </div>
       </main>
+
+      {/* AI评估完成弹窗 */}
+      {showAICompletedModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style={{backgroundColor: 'rgba(0, 0, 0, 0.5)'}}>
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center mb-4">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <span className="text-green-600 text-xl">✅</span>
+                </div>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-lg font-medium text-gray-900">AI评估已完成！</h3>
+                <p className="text-sm text-gray-600">AI已完成对该会话的评估分析</p>
+              </div>
+            </div>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-blue-800">
+                🎯 AI评估结果已生成，您可以查看AI的评分和建议作为参考，然后进行您的导师评估。
+              </p>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={handleCloseAICompletedModal}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                稍后查看
+              </button>
+              <button
+                onClick={handleRefreshAfterAICompleted}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                立即查看AI评估
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

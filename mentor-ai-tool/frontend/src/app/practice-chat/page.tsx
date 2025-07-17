@@ -276,11 +276,11 @@ export default function PracticeChat() {
           timestamp: new Date()
         }]);
       } else {
-        console.error('Failed to create session, response:', response.status);
+        console.warn('会话创建失败，切换到本地模式，状态码:', response.status);
         // 创建一个模拟的会话ID用于本地模式
         const mockSessionId = 'mock-session-' + Date.now();
         setSessionId(mockSessionId);
-        console.log('Using mock session ID:', mockSessionId);
+        console.log('使用本地模拟会话ID:', mockSessionId);
         
         const initialMessage = generateInitialMessage(config);
         setMessages([{

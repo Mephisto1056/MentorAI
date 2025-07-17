@@ -487,33 +487,33 @@ class AIEvaluationService {
     const detailedDimensions = [
       {
         dimension: "沟通维度",
-        score: 75,
+        score: 60,
         details: [
           {
             id: "criteria1",
             criteria: "匹配客户的沟通方式",
-            score: 75,
+            score: 60,
             feedback: "基本能够适应客户沟通风格，建议更加细致观察客户反应",
             evidence: this.extractRealEvidenceFromAI(conversation, "criteria1")
           },
           {
             id: "criteria2",
             criteria: "识别客户的沟通方式",
-            score: 75,
+            score: 60,
             feedback: "对客户沟通偏好有一定识别，可进一步提升敏感度",
             evidence: this.extractRealEvidenceFromAI(conversation, "criteria2")
           },
           {
             id: "criteria3",
             criteria: "引导沟通的方向",
-            score: 75,
+            score: 60,
             feedback: "能够基本引导对话方向，建议加强主动性",
             evidence: this.extractRealEvidenceFromAI(conversation, "criteria3")
           },
           {
             id: "criteria4",
             criteria: "清晰的表达自己的观点",
-            score: 75,
+            score: 60,
             feedback: "表达较为清晰，逻辑性有待加强",
             evidence: this.extractRealEvidenceFromAI(conversation, "criteria4")
           }
@@ -522,26 +522,26 @@ class AIEvaluationService {
       },
       {
         dimension: "本品维度",
-        score: 75,
+        score: 60,
         details: [
           {
             id: "criteria5",
             criteria: "本品产品知识正确",
-            score: 75,
+            score: 60,
             feedback: "产品信息基本准确，建议加强技术细节掌握",
             evidence: this.extractRealEvidenceFromAI(conversation, "criteria5")
           },
           {
             id: "criteria6",
             criteria: "突出本产品的配置或者功能优势",
-            score: 75,
+            score: 60,
             feedback: "能够介绍产品优势，但亮点展示不够突出",
             evidence: this.extractRealEvidenceFromAI(conversation, "criteria6")
           },
           {
             id: "criteria7",
             criteria: "清晰的确定客户的目标车型",
-            score: 75,
+            score: 60,
             feedback: "对客户需求有基本了解，需要更精准的需求挖掘",
             evidence: this.extractRealEvidenceFromAI(conversation, "criteria7")
           }
@@ -550,26 +550,26 @@ class AIEvaluationService {
       },
       {
         dimension: "竞品维度",
-        score: 75,
+        score: 60,
         details: [
           {
             id: "criteria8",
             criteria: "了解竞品的相关知识",
-            score: 75,
+            score: 60,
             feedback: "对竞品有基本了解，建议深入研究竞品特点",
             evidence: this.extractRealEvidenceFromAI(conversation, "criteria8")
           },
           {
             id: "criteria9",
             criteria: "可以找出本品和竞品间的差异",
-            score: 75,
+            score: 60,
             feedback: "能够识别基本差异，差异化分析需要更加深入",
             evidence: this.extractRealEvidenceFromAI(conversation, "criteria9")
           },
           {
             id: "criteria10",
             criteria: "可以客观的进行竞品和本品的对比",
-            score: 75,
+            score: 60,
             feedback: "对比分析较为客观，建议增加数据支撑",
             evidence: this.extractRealEvidenceFromAI(conversation, "criteria10")
           }
@@ -578,26 +578,26 @@ class AIEvaluationService {
       },
       {
         dimension: "客户信息获取维度",
-        score: 75,
+        score: 60,
         details: [
           {
             id: "criteria11",
             criteria: "了解了客户的兴趣爱好",
-            score: 75,
+            score: 60,
             feedback: "对客户兴趣有一定了解，可以更主动挖掘",
             evidence: this.extractRealEvidenceFromAI(conversation, "criteria11")
           },
           {
             id: "criteria12",
             criteria: "了解了客户的职业背景",
-            score: 75,
+            score: 60,
             feedback: "基本了解客户职业情况，建议深入了解工作特点",
             evidence: this.extractRealEvidenceFromAI(conversation, "criteria12")
           },
           {
             id: "criteria13",
             criteria: "可以匹配客户的性格特征，进行沟通",
-            score: 75,
+            score: 60,
             feedback: "性格匹配度一般，需要提升性格识别能力",
             evidence: this.extractRealEvidenceFromAI(conversation, "criteria13")
           }
@@ -606,12 +606,12 @@ class AIEvaluationService {
       },
       {
         dimension: "方法论匹配度",
-        score: 75,
+        score: 60,
         details: [
           {
             id: "criteria14",
             criteria: "可以在场景中，清晰运用预设的方法论",
-            score: 75,
+            score: 60,
             feedback: "方法论运用基本到位，但执行的系统性和完整性需要加强",
             evidence: this.extractRealEvidenceFromAI(conversation, "criteria14")
           }
@@ -621,7 +621,7 @@ class AIEvaluationService {
     ];
     
     return {
-      overallScore: 75,
+      overallScore: 60,
       dimensionScores: detailedDimensions,
       suggestions: [
         "加强客户沟通方式的识别和适应能力",

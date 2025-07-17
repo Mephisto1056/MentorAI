@@ -50,6 +50,12 @@ const practiceSessionSchema = new mongoose.Schema({
       default: {}
     }
   }],
+  // AI评估状态字段
+  aiEvaluationStatus: {
+    type: String,
+    enum: ['pending', 'in_progress', 'completed', 'failed'],
+    default: 'pending'
+  },
   aiEvaluation: {
     overallScore: {
       type: Number,
