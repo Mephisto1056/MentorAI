@@ -126,17 +126,10 @@ export default function Dashboard() {
             {/* 任务完成率趋势 */}
             <TaskCompletionTrendChart
               timeRange={selectedTimeRange}
-              onViewLarge={() => {
-                // 在这里可以处理打开大图模态框的逻辑
-                // 例如: setModalContent(<TaskCompletionTrendChart timeRange={selectedTimeRange} isLargeView />); setIsChartModalOpen(true);
-                alert('打开大图功能待实现');
-              }}
             />
 
             {/* 评价度分布 */}
-            <EvaluationDistributionChart 
-              onViewLarge={() => setIsChartModalOpen(true)}
-            />
+            <EvaluationDistributionChart />
           </div>
 
           {/* 详细数据表格和排行榜 */}
@@ -146,11 +139,11 @@ export default function Dashboard() {
               <h3 className="text-lg font-medium text-gray-900 mb-4">学员排行榜</h3>
               <div className="space-y-3">
                 {[
-                  { name: '张三', score: 92, sessions: 15, trend: 'up' },
-                  { name: '李四', score: 88, sessions: 12, trend: 'up' },
-                  { name: '王五', score: 85, sessions: 18, trend: 'down' },
-                  { name: '赵六', score: 82, sessions: 9, trend: 'up' },
-                  { name: '钱七', score: 79, sessions: 14, trend: 'stable' }
+                  { name: 'Amy', score: 92, sessions: 15, trend: 'up' },
+                  { name: 'Andy', score: 88, sessions: 12, trend: 'up' },
+                  { name: 'Bob', score: 85, sessions: 18, trend: 'down' },
+                  { name: 'Carol', score: 82, sessions: 9, trend: 'up' },
+                  { name: 'David', score: 79, sessions: 14, trend: 'stable' }
                 ].map((student, index) => (
                   <div key={index} className="flex items-center justify-between py-2">
                     <div className="flex items-center">
@@ -308,11 +301,11 @@ export default function Dashboard() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {[
-                    { name: '张三', assigned: 15, completion: 93, aiScore: 89, mentorScore: 95, overall: 92, lastActive: '2小时前' },
-                    { name: '李四', assigned: 12, completion: 83, aiScore: 85, mentorScore: 91, overall: 88, lastActive: '5小时前' },
-                    { name: '王五', assigned: 18, completion: 89, aiScore: 82, mentorScore: 88, overall: 85, lastActive: '1天前' },
-                    { name: '赵六', assigned: 9, completion: 78, aiScore: 80, mentorScore: 84, overall: 82, lastActive: '3小时前' },
-                    { name: '钱七', assigned: 14, completion: 71, aiScore: 76, mentorScore: 82, overall: 79, lastActive: '6小时前' }
+                    { name: 'Amy', assigned: 15, completion: 93, aiScore: 89, mentorScore: 95, overall: 92, lastActive: '2小时前' },
+                    { name: 'Andy', assigned: 12, completion: 83, aiScore: 85, mentorScore: 91, overall: 88, lastActive: '5小时前' },
+                    { name: 'Bob', assigned: 18, completion: 89, aiScore: 82, mentorScore: 88, overall: 85, lastActive: '1天前' },
+                    { name: 'Carol', assigned: 9, completion: 78, aiScore: 80, mentorScore: 84, overall: 82, lastActive: '3小时前' },
+                    { name: 'David', assigned: 14, completion: 71, aiScore: 76, mentorScore: 82, overall: 79, lastActive: '6小时前' }
                   ].map((row, index) => (
                     <tr key={index}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{row.name}</td>

@@ -25,24 +25,27 @@ class AIBase {
   /**
    * 调用阿里云通义千问API
    */
-  async callAlicloudAPI(messages, systemPrompt = '') {
+  async callAlicloudAPI(messages, systemPrompt = '', options = {}) {
     logger.info(`Using Alicloud API Key: ${this.alicloudApiKey}`);
     if (!this.alicloudApiKey) {
       throw new Error('Alicloud API key not configured');
     }
 
+    // 确保systemPrompt是字符串
+    const promptText = typeof systemPrompt === 'object' ? systemPrompt.prompt : systemPrompt;
+
     const requestData = {
       model: this.alicloudModel,
       input: {
         messages: [
-          ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+          ...(promptText ? [{ role: 'system', content: promptText }] : []),
           ...messages
         ]
       },
       parameters: {
-        max_tokens: 1500,
-        temperature: 0.7,
-        top_p: 0.8
+        max_tokens: options.max_tokens || 16384,
+        temperature: options.temperature || 0.7,
+        top_p: options.top_p || 0.8
       }
     };
 
@@ -71,7 +74,7 @@ class AIBase {
   /**
    * 调用OpenAI API
    */
-  async callOpenAIAPI(messages, systemPrompt = '') {
+  async callOpenAIAPI(messages, systemPrompt = '', options = {}) {
     try {
       if (!this.openaiApiKey) {
         throw new Error('OpenAI API key not configured');
@@ -83,8 +86,8 @@ class AIBase {
           ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
           ...messages
         ],
-        max_tokens: 1500,
-        temperature: 0.7
+        max_tokens: options.max_tokens || 131072,
+        temperature: options.temperature || 0.7
       };
 
       const response = await axios.post(`${this.openaiBaseUrl}/chat/completions`, requestData, {
@@ -107,9 +110,9 @@ class AIBase {
   }
 
   /**
-   * 统一的AI响应生成接口
+   * 调用Kimi API
    */
-  async callKimiAPI(messages, systemPrompt = '') {
+  async callKimiAPI(messages, systemPrompt = '', options = {}) {
     try {
       if (!this.kimiApiKey) {
         throw new Error('Kimi API key not configured');
@@ -121,8 +124,8 @@ class AIBase {
           ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
           ...messages
         ],
-        max_tokens: 1500,
-        temperature: 0.7
+        max_tokens: options.max_tokens || 131072,
+        temperature: options.temperature || 0.7
       };
 
       const response = await axios.post(`${this.kimiBaseUrl}/chat/completions`, requestData, {
@@ -147,14 +150,14 @@ class AIBase {
   /**
    * 统一的AI响应生成接口
    */
-  async generateResponse(messages, systemPrompt = '') {
+  async generateResponse(messages, systemPrompt = '', options = {}) {
     try {
       if (this.provider === 'alicloud') {
-        return await this.callAlicloudAPI(messages, systemPrompt);
+        return await this.callAlicloudAPI(messages, systemPrompt, options);
       } else if (this.provider === 'openai') {
-        return await this.callOpenAIAPI(messages, systemPrompt);
+        return await this.callOpenAIAPI(messages, systemPrompt, options);
       } else if (this.provider === 'kimi') {
-        return await this.callKimiAPI(messages, systemPrompt);
+        return await this.callKimiAPI(messages, systemPrompt, options);
       } else {
         throw new Error(`Unsupported AI provider: ${this.provider}`);
       }
@@ -165,7 +168,7 @@ class AIBase {
       if (this.provider === 'alicloud' && this.openaiApiKey) {
         logger.info('Falling back to OpenAI API');
         try {
-          return await this.callOpenAIAPI(messages, systemPrompt);
+          return await this.callOpenAIAPI(messages, systemPrompt, options);
         } catch (fallbackError) {
           logger.error('Fallback OpenAI API also failed:', fallbackError);
         }

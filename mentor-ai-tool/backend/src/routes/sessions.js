@@ -207,6 +207,60 @@ router.post('/:id/messages', async (req, res, next) => {
   }
 });
 
+// 异步AI评估函数
+async function performAsyncAIEvaluation(sessionId) {
+  try {
+    logger.info(`Starting async AI evaluation for session ${sessionId}`);
+    
+    const session = await PracticeSession.findById(sessionId);
+    if (!session) {
+      logger.error(`Session ${sessionId} not found for AI evaluation`);
+      return;
+    }
+
+    // Get evaluation criteria based on task configuration
+    const evaluationCriteria = {
+      taskGoal: session.taskConfig?.taskGoal || session.customerProfile?.taskGoal,
+      methodology: session.taskConfig?.methodology || session.customerProfile?.methodology,
+      customerProfile: session.customerProfile
+    };
+
+    // Call AI service to evaluate performance
+    const aiEvaluation = await aiService.evaluatePerformance(
+      session.conversation,
+      evaluationCriteria
+    );
+
+    // Save AI evaluation to session
+    session.aiEvaluation = aiEvaluation;
+    session.aiEvaluationStatus = 'completed';
+    await session.save();
+    
+    logger.info(`Async AI evaluation completed for session ${sessionId}, overall score: ${aiEvaluation.overallScore}`);
+    
+  } catch (evaluationError) {
+    logger.error(`Async AI evaluation failed for session ${sessionId}:`, evaluationError);
+    
+    // Update session with error status
+    try {
+      const session = await PracticeSession.findById(sessionId);
+      if (session) {
+        session.aiEvaluationStatus = 'failed';
+        session.aiEvaluation = {
+          overallScore: null,
+          dimensionScores: [],
+          suggestions: ['AI评估暂时不可用，请等待导师评估'],
+          generatedAt: new Date(),
+          error: 'AI evaluation failed'
+        };
+        await session.save();
+      }
+    } catch (saveError) {
+      logger.error(`Failed to save error status for session ${sessionId}:`, saveError);
+    }
+  }
+}
+
 // @desc    Submit session for evaluation
 // @route   POST /api/sessions/:id/submit
 // @access  Private
@@ -234,48 +288,25 @@ router.post('/:id/submit', async (req, res, next) => {
     session.submittedAt = new Date();
     session.completedAt = new Date();
     session.calculateDuration();
-
-    // Trigger AI evaluation automatically
-    try {
-      logger.info(`Starting AI evaluation for session ${session._id}`);
-      
-      // Get evaluation criteria based on task configuration
-      const evaluationCriteria = {
-        taskGoal: session.taskConfig?.taskGoal || session.customerProfile?.taskGoal,
-        methodology: session.taskConfig?.methodology || session.customerProfile?.methodology,
-        customerProfile: session.customerProfile
-      };
-
-      // Call AI service to evaluate performance
-      const aiEvaluation = await aiService.evaluatePerformance(
-        session.conversation,
-        evaluationCriteria
-      );
-
-      // Save AI evaluation to session
-      session.aiEvaluation = aiEvaluation;
-      logger.info(`AI evaluation completed for session ${session._id}, overall score: ${aiEvaluation.overallScore}`);
-      
-    } catch (evaluationError) {
-      logger.error('AI evaluation failed:', evaluationError);
-      // Don't fail the submission if AI evaluation fails
-      // Set a default evaluation to indicate the failure
-      session.aiEvaluation = {
-        overallScore: null,
-        dimensionScores: [],
-        suggestions: ['AI评估暂时不可用，请等待导师评估'],
-        generatedAt: new Date(),
-        error: 'AI evaluation failed'
-      };
-    }
-
+    
+    // 设置AI评估状态为进行中
+    session.aiEvaluationStatus = 'in_progress';
+    
+    // 先保存会话状态，立即返回响应
     await session.save();
 
+    // 立即返回响应，不等待AI评估完成
     res.status(200).json({
       success: true,
       data: session,
-      message: 'Session submitted successfully. AI evaluation completed.'
+      message: 'Session submitted successfully. AI evaluation is in progress.'
     });
+
+    // 异步执行AI评估，不阻塞响应
+    setImmediate(() => {
+      performAsyncAIEvaluation(session._id);
+    });
+
   } catch (error) {
     logger.error('Submit session error:', error);
     next(error);
@@ -319,16 +350,23 @@ router.get('/:id/evaluation', async (req, res, next) => {
     let aiEvaluation = session.aiEvaluation;
     if (aiEvaluation && aiEvaluation.dimensionScores && aiEvaluation.dimensionScores.length > 0) {
       // 检查是否缺少details字段
-      const needsDetails = aiEvaluation.dimensionScores.some(dimension => !dimension.details);
+      const needsDetails = aiEvaluation.dimensionScores.some(dimension => !dimension.details || dimension.details.length === 0);
       
       logger.info(`会话 ${session._id} 检查details字段: needsDetails=${needsDetails}`);
       
       if (needsDetails) {
         logger.info(`补充会话 ${session._id} 的AI评估详细信息`);
         
-        // 使用aiService的getDefaultEvaluation方法
-        const aiService = require('../services/aiService');
-        const defaultEvaluation = aiService.getDefaultEvaluation();
+        // 使用aiEvaluationService的getDefaultEvaluation方法，传入真实对话数据
+        const aiEvaluationService = require('../services/aiEvaluationService');
+        const defaultEvaluation = aiEvaluationService.getDefaultEvaluation(
+          {
+            taskGoal: session.taskConfig?.taskGoal,
+            methodology: session.taskConfig?.methodology,
+            customerProfile: session.customerProfile
+          },
+          session.conversation // 传入真实对话数据
+        );
         
         // 创建新的aiEvaluation对象，避免修改原始数据
         const originalEvaluation = aiEvaluation.toObject ? aiEvaluation.toObject() : aiEvaluation;
@@ -336,17 +374,17 @@ router.get('/:id/evaluation', async (req, res, next) => {
         aiEvaluation = {
           ...originalEvaluation,
           dimensionScores: originalEvaluation.dimensionScores.map((dimension, index) => {
-            if (!dimension.details) {
+            if (!dimension.details || dimension.details.length === 0) {
               // 从默认评估中获取对应维度的详细信息
-              const defaultDimension = defaultEvaluation.dimensionScores[index];
+              const defaultDimension = defaultEvaluation.dimensionScores.find(d => d.dimension === dimension.dimension);
               if (defaultDimension && defaultDimension.details) {
                 logger.info(`为维度 "${dimension.dimension}" 补充详细信息`);
                 return {
                   ...dimension,
-                  details: defaultDimension.details.map((detail, detailIndex) => ({
+                  details: defaultDimension.details.map((detail) => ({
                     ...detail,
-                    // 为每个细则生成稍微不同的分数，基于维度分数±5分的随机变化
-                    score: Math.max(60, Math.min(100, dimension.score + (Math.random() * 10 - 5)))
+                    // 使用维度分数作为基础，添加一些随机变化
+                    score: Math.round(dimension.score + (Math.random() - 0.5) * 10)
                   }))
                 };
               }
@@ -358,7 +396,9 @@ router.get('/:id/evaluation', async (req, res, next) => {
         };
         
         logger.info(`补充完成，维度数量: ${aiEvaluation.dimensionScores.length}`);
-        logger.info(`第一个维度details: ${JSON.stringify(aiEvaluation.dimensionScores[0].details)}`);
+        if (aiEvaluation.dimensionScores[0] && aiEvaluation.dimensionScores[0].details) {
+          logger.info(`第一个维度details数量: ${aiEvaluation.dimensionScores[0].details.length}`);
+        }
       }
     }
 
@@ -372,6 +412,7 @@ router.get('/:id/evaluation', async (req, res, next) => {
       customerProfile: session.customerProfile,
       conversation: session.conversation,
       aiEvaluation: aiEvaluation,
+      aiEvaluationStatus: session.aiEvaluationStatus || 'unknown',
       mentorEvaluation: session.mentorEvaluation,
       student: session.studentId
     };
@@ -382,6 +423,35 @@ router.get('/:id/evaluation', async (req, res, next) => {
     });
   } catch (error) {
     logger.error('Get evaluation error:', error);
+    next(error);
+  }
+});
+
+// @desc    Get AI evaluation status
+// @route   GET /api/sessions/:id/ai-evaluation-status
+// @access  Private
+router.get('/:id/ai-evaluation-status', async (req, res, next) => {
+  try {
+    const session = await PracticeSession.findById(req.params.id);
+
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Practice session not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        sessionId: session._id,
+        aiEvaluationStatus: session.aiEvaluationStatus || 'unknown',
+        hasAiEvaluation: !!session.aiEvaluation,
+        overallScore: session.aiEvaluation?.overallScore || null
+      }
+    });
+  } catch (error) {
+    logger.error('Get AI evaluation status error:', error);
     next(error);
   }
 });

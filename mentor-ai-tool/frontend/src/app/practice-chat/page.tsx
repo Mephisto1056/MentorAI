@@ -21,7 +21,7 @@ export default function PracticeChat() {
   const [isTyping, setIsTyping] = useState(false);
   const [sessionStartTime] = useState(new Date());
   const [customerName, setCustomerName] = useState<string>('');
-  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(false);
   
   // 语音功能状态
   const [voiceSettings, setVoiceSettings] = useState({
@@ -88,6 +88,9 @@ export default function PracticeChat() {
   useEffect(() => {
     const configParam = searchParams.get('config');
     const promptParam = searchParams.get('prompt');
+    
+    // 重置客户姓名，确保使用新配置生成
+    setCustomerName('');
     
     if (configParam) {
       try {
@@ -163,27 +166,38 @@ export default function PracticeChat() {
     }
   }, [searchParams]);
 
-  // 自动滚动到底部 - 只在收到AI回复时滚动
+  // 自动滚动到底部 - 只滚动对话框内部，不滚动整个页面
   useEffect(() => {
-    if (shouldAutoScroll) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (shouldAutoScroll && messages.length > 0) {
+      // 只在最后一条消息是AI回复时才自动滚动
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage && lastMessage.role === 'ai') {
+        // 获取对话框容器并滚动到底部
+        const chatContainer = document.getElementById('chat-container');
+        if (chatContainer) {
+          chatContainer.scrollTo({
+            top: chatContainer.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
+      }
     }
   }, [messages, shouldAutoScroll]);
 
   const generateInitialMessage = (config: any) => {
     const name = getCustomerName(config);
-    const profession = config.customerProfession || '客户';
-    const taskGoal = config.taskGoal || '产品咨询';
-    const interestedVehicle = config.interestedVehicle || '保时捷车型';
-    const competitorInterested = config.competitorInterested || '其他品牌';
     
-    const greetings = [
-      `您好！我是${name}，一位${profession}。我最近在考虑购买${interestedVehicle}，听说这款车很不错。`,
-      `你好，我叫${name}，从事${profession}工作。我对${interestedVehicle}很感兴趣，想了解一下详细信息。`,
-      `您好！我是${name}，职业是${profession}。我在考虑${interestedVehicle}，不过也在看${competitorInterested}，想对比一下。`
+    // 更自然的开场白，不暴露太多信息
+    const naturalGreetings = [
+      `您好！我想了解一下保时捷的车型。`,
+      `你好，我对保时捷比较感兴趣，能介绍一下吗？`,
+      `您好！听朋友说保时捷不错，想来看看。`,
+      `你好，我想了解一下你们的产品。`,
+      `您好！我路过看到展厅，想进来了解一下。`,
+      `你好，我对豪华车比较感兴趣，能给我介绍介绍吗？`
     ];
     
-    return greetings[Math.floor(Math.random() * greetings.length)];
+    return naturalGreetings[Math.floor(Math.random() * naturalGreetings.length)];
   };
 
   // 使用确定性的名称生成，避免水合错误
@@ -201,13 +215,12 @@ export default function PracticeChat() {
     const seed = profession.length + age.length;
     
     let name = '';
-    if (config?.customerGender === '男') {
-      name = maleNames[seed % maleNames.length];
-    } else if (config?.customerGender === '女') {
+    if (config?.customerGender === '女') {
+      // 明确是女性，使用女士称谓
       name = femaleNames[seed % femaleNames.length];
     } else {
-      const allNames = [...maleNames, ...femaleNames];
-      name = allNames[seed % allNames.length];
+      // 默认使用男士称谓（包括明确是男性或未指定性别的情况）
+      name = maleNames[seed % maleNames.length];
     }
     
     // 设置客户名称状态，确保一致性
@@ -356,11 +369,14 @@ export default function PracticeChat() {
         })
       });
 
+      console.log('API响应状态:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('API响应数据:', data);
         
-        if (data.success && data.data) {
-          // 语音响应模式
+        if (data.success && data.data && data.data.text) {
+          // 成功获取AI响应
           setMessages(prev => [...prev, {
             role: 'ai',
             content: data.data.text,
@@ -368,40 +384,85 @@ export default function PracticeChat() {
             voice: data.data.voice,
             voiceProfile: data.data.voiceProfile
           }]);
+          console.log('AI响应添加成功:', data.data.text.substring(0, 100));
         } else {
-          // 降级到普通文字响应
+          console.error('API响应格式错误:', data);
+          // 使用智能回复而不是固定回复
+          const contextualResponse = generateContextualResponse(userMessage, taskConfig);
           setMessages(prev => [...prev, {
             role: 'ai',
-            content: data.response || data.data?.text || '抱歉，我需要一点时间思考。',
+            content: contextualResponse,
             timestamp: new Date()
           }]);
         }
       } else {
-        // 如果API调用失败，使用预设回复
-        const fallbackResponses = [
-          '嗯，您说的很有道理。我想了解更多关于这款车的信息。',
-          '这个配置听起来不错。价格方面怎么样呢？',
-          '我需要考虑一下。还有其他需要了解的吗？'
-        ];
-        const randomResponse = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
+        console.error('API调用失败，状态码:', response.status);
+        const errorText = await response.text();
+        console.error('错误详情:', errorText);
+        
+        // 使用智能回复而不是固定回复
+        const contextualResponse = generateContextualResponse(userMessage, taskConfig);
         setMessages(prev => [...prev, {
           role: 'ai',
-          content: randomResponse,
+          content: contextualResponse,
           timestamp: new Date()
         }]);
       }
     } catch (error) {
       console.error('AI response error:', error);
-      // 错误处理：使用预设回复
+      // 使用智能回复而不是固定回复
+      const contextualResponse = generateContextualResponse(userMessage, taskConfig);
       setMessages(prev => [...prev, {
         role: 'ai',
-        content: '抱歉，我需要一点时间思考。请继续介绍您的产品。',
+        content: contextualResponse,
         timestamp: new Date()
       }]);
     } finally {
       setIsTyping(false);
       setShouldAutoScroll(true); // AI回复完成后恢复自动滚动
     }
+  };
+
+  // 生成基于上下文的智能回复
+  const generateContextualResponse = (userMessage: string, config: any) => {
+    const customerName = getCustomerName(config || {});
+    const profession = config?.customerProfession || '客户';
+    const focusPoints = config?.customerFocus || ['产品信息'];
+    const interestedVehicle = config?.interestedVehicle || '保时捷车型';
+    
+    // 根据用户消息内容生成相应回复
+    const lowerMessage = userMessage.toLowerCase();
+    
+    if (lowerMessage.includes('价格') || lowerMessage.includes('多少钱') || lowerMessage.includes('费用')) {
+      return `作为${profession}，我对价格还是比较敏感的。${interestedVehicle}的价格区间大概是多少？有什么金融方案吗？`;
+    }
+    
+    if (lowerMessage.includes('配置') || lowerMessage.includes('参数') || lowerMessage.includes('功能')) {
+      return `我比较关注${focusPoints[0] || '性能'}方面，能详细介绍一下${interestedVehicle}在这方面的配置吗？`;
+    }
+    
+    if (lowerMessage.includes('试驾') || lowerMessage.includes('体验')) {
+      return `听起来不错！我什么时候可以预约试驾？我想亲自感受一下${interestedVehicle}的驾驶体验。`;
+    }
+    
+    if (lowerMessage.includes('保养') || lowerMessage.includes('维修') || lowerMessage.includes('服务')) {
+      return `保时捷的售后服务怎么样？保养费用大概是什么水平？`;
+    }
+    
+    if (lowerMessage.includes('竞品') || lowerMessage.includes('对比') || lowerMessage.includes('比较')) {
+      const competitor = config?.competitorInterested || '其他品牌';
+      return `我之前也看过${competitor}，相比之下保时捷有什么独特的优势吗？`;
+    }
+    
+    // 默认回复，但更加个性化
+    const responses = [
+      `作为${profession}，我想了解更多关于${interestedVehicle}的详细信息。`,
+      `这个介绍很有意思，能再详细说说${focusPoints[0] || '产品特点'}吗？`,
+      `听起来不错，不过我还需要考虑一些实际因素。`,
+      `我对保时捷品牌一直很感兴趣，这款车的核心卖点是什么？`
+    ];
+    
+    return responses[Math.floor(Math.random() * responses.length)];
   };
 
   // 直接调用阿里云API生成回复（降级模式）
@@ -562,6 +623,9 @@ export default function PracticeChat() {
   };
 
   const restartSession = () => {
+    // 重置客户姓名，确保使用当前配置重新生成
+    setCustomerName('');
+    
     // 使用当前配置重新生成初始消息，而不是硬编码
     const initialMessage = taskConfig ? generateInitialMessage(taskConfig) : '您好！我对您的产品很感兴趣，请为我介绍一下。';
     setMessages([
@@ -646,13 +710,31 @@ export default function PracticeChat() {
                         客户：{getCustomerName(taskConfig || {})}（{taskConfig?.customerProfession || '金融分析师'}）
                       </p>
                     </div>
-                    <div className="text-sm text-gray-500">
-                      对话时长: {getSessionDuration()}
+                    <div className="flex items-center space-x-4">
+                      {/* 自动滚动控制开关 */}
+                      <div className="flex items-center space-x-2">
+                        <label className="text-xs text-gray-600">自动滚动</label>
+                        <button
+                          onClick={() => setShouldAutoScroll(!shouldAutoScroll)}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                            shouldAutoScroll ? 'bg-blue-600' : 'bg-gray-300'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                              shouldAutoScroll ? 'translate-x-5' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        对话时长: {getSessionDuration()}
+                      </div>
                     </div>
                   </div>
                 </div>
                 
-                <div className="h-96 overflow-y-auto p-6 space-y-4">
+                <div className="h-96 overflow-y-auto p-6 space-y-4" id="chat-container">
                   {messages.map((message, index) => (
                     <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-xs lg:max-w-md space-y-2 ${

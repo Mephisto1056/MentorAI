@@ -33,6 +33,40 @@ class AIService {
   }
 
   /**
+   * 获取默认评估结果
+   */
+  getDefaultEvaluation(evaluationCriteria) {
+    return aiEvaluationService.getDefaultEvaluation(evaluationCriteria);
+  }
+
+  /**
+   * 生成优化的prompt
+   */
+  async generateOptimizedPrompt(taskConfig) {
+    try {
+      // 使用aiCharacterService生成基础prompt
+      const result = aiCharacterService.generateCustomerPrompt(taskConfig);
+      
+      // 处理新的返回格式（包含prompt和customerType）
+      if (typeof result === 'object' && result.prompt) {
+        return {
+          prompt: result.prompt,
+          customerType: result.customerType
+        };
+      } else {
+        // 兼容旧格式（只返回prompt字符串）
+        return {
+          prompt: result,
+          customerType: null
+        };
+      }
+    } catch (error) {
+      logger.error('Optimized prompt generation error:', error);
+      throw new Error('Failed to generate optimized prompt: ' + error.message);
+    }
+  }
+
+  /**
    * 生成分析报告
    */
   async generateAnalyticsReport(data) {

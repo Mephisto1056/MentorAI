@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { getApiUrl } from '../../config';
 
@@ -34,9 +34,141 @@ export default function TaskGenerator(): React.JSX.Element {
 
   const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [conflictWarnings, setConflictWarnings] = useState<string[]>([]);
-  const [customerTypes, setCustomerTypes] = useState<CustomerType[]>([]);
-  const [isLoadingTypes, setIsLoadingTypes] = useState(false);
-  const [recommendedType, setRecommendedType] = useState<string>('');
+  const [showCustomerTemplates, setShowCustomerTemplates] = useState(false);
+  const [showRandomOptions, setShowRandomOptions] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [customerTypes] = useState([
+    {
+      name: '成功企业家',
+      description: '注重品牌象征意义，决策快速果断，偏好个性化定制',
+      template: {
+        customerPersonality: ['强势', '主导权', '独立'],
+        customerProfession: '企业家',
+        customerCommunication: 'D控制型',
+        customerHobbies: ['高尔夫', '商务社交'],
+        customerGender: '男',
+        customerAge: '35-55',
+        customerFocus: ['品牌象征意义', '个性化定制', '高端配置']
+      }
+    },
+    {
+      name: '精英专业人士',
+      description: '理性分析价值与性能比，详细研究技术参数，重视专业评测意见',
+      template: {
+        customerPersonality: ['理性', '数据导向', '专业'],
+        customerProfession: '医生',
+        customerCommunication: 'C遵循型',
+        customerHobbies: ['阅读', '研究'],
+        customerGender: '男',
+        customerAge: '30-50',
+        customerFocus: ['技术参数', '性能数据', '价值分析']
+      }
+    },
+    {
+      name: '老牌豪车收藏家',
+      description: '重视品牌历史传承，熟悉每款车型的发展历程，追求稀有限量版',
+      template: {
+        customerPersonality: ['传统', '品味', '历史情怀'],
+        customerProfession: '收藏家',
+        customerCommunication: 'S稳定型',
+        customerHobbies: ['收藏', '历史研究'],
+        customerGender: '男',
+        customerAge: '45-65',
+        customerFocus: ['品牌历史', '车型传承', '限量版']
+      }
+    },
+    {
+      name: '科技爱好者',
+      description: '关注最新技术创新，热衷于保时捷混合动力和纯电动车型',
+      template: {
+        customerPersonality: ['创新', '前瞻', '技术控'],
+        customerProfession: '工程师',
+        customerCommunication: 'I影响型',
+        customerHobbies: ['科技产品', '创新体验'],
+        customerGender: '男',
+        customerAge: '28-45',
+        customerFocus: ['最新技术', '电动化', '智能功能']
+      }
+    },
+    {
+      name: '赛道爱好者',
+      description: '极度重视驾驶体验和操控性能，决策基于赛道测试成绩',
+      template: {
+        customerPersonality: ['激情', '专业', '追求极致'],
+        customerProfession: '赛车手',
+        customerCommunication: 'D控制型',
+        customerHobbies: ['赛车', '驾驶培训'],
+        customerGender: '男',
+        customerAge: '25-50',
+        customerFocus: ['马力数据', '加速性能', '操控性']
+      }
+    },
+    {
+      name: '生活方式追求者',
+      description: '视保时捷为生活品质象征，决策受社交圈影响，重视品牌带来的身份认同',
+      template: {
+        customerPersonality: ['时尚', '社交', '品质追求'],
+        customerProfession: '媒体人士',
+        customerCommunication: 'I影响型',
+        customerHobbies: ['时尚', '社交', '旅行'],
+        customerGender: '女',
+        customerAge: '30-45',
+        customerFocus: ['生活品质', '社交价值', '品牌形象']
+      }
+    },
+    {
+      name: '新兴富豪',
+      description: '决策直接快速，看重即时满足感，品牌象征意义大于实用性',
+      template: {
+        customerPersonality: ['直接', '快速', '即时满足'],
+        customerProfession: '新兴企业家',
+        customerCommunication: 'D控制型',
+        customerHobbies: ['社交媒体', '奢侈品'],
+        customerGender: '男',
+        customerAge: '25-40',
+        customerFocus: ['品牌象征', '最新款式', '显眼外观']
+      }
+    },
+    {
+      name: '家庭升级型',
+      description: '将保时捷视为家庭用车升级选择，关注SUV和四门轿车模型',
+      template: {
+        customerPersonality: ['务实', '家庭责任', '平衡考虑'],
+        customerProfession: '中高管',
+        customerCommunication: 'S稳定型',
+        customerHobbies: ['家庭活动', '旅行'],
+        customerGender: '男',
+        customerAge: '35-50',
+        customerFocus: ['实用性', '安全性', '舒适度']
+      }
+    },
+    {
+      name: '节俭型豪华消费者',
+      description: '精打细算购买入门级保时捷，详细研究二手市场，关注车辆保值率',
+      template: {
+        customerPersonality: ['精明', '节俭', '理性'],
+        customerProfession: '小企业主',
+        customerCommunication: 'C遵循型',
+        customerHobbies: ['理财', '投资'],
+        customerGender: '男',
+        customerAge: '30-55',
+        customerFocus: ['保值率', '运营成本', '入门配置']
+      }
+    },
+    {
+      name: '品牌跨界尝鲜者',
+      description: '拥有其他豪华品牌车辆后尝试保时捷，决策基于品牌对比和差异化体验',
+      template: {
+        customerPersonality: ['好奇', '体验导向', '追求新鲜'],
+        customerProfession: '汽车爱好者',
+        customerCommunication: 'I影响型',
+        customerHobbies: ['汽车体验', '品牌研究'],
+        customerGender: '男',
+        customerAge: '35-55',
+        customerFocus: ['品牌差异', '独特体验', '驾驶感受']
+      }
+    }
+  ]);
 
   // 冲突检测规则
   const conflictRules = {
@@ -117,84 +249,25 @@ export default function TaskGenerator(): React.JSX.Element {
     }
   };
 
-  // 加载客户类型
-  useEffect(() => {
-    const loadCustomerTypes = async () => {
-      setIsLoadingTypes(true);
-      try {
-        const response = await fetch(getApiUrl('/api/customer-types'));
-        if (response.ok) {
-          const data = await response.json();
-          setCustomerTypes(data.data || []);
-        }
-      } catch (error) {
-        console.error('Failed to load customer types:', error);
-      } finally {
-        setIsLoadingTypes(false);
-      }
-    };
-
-    loadCustomerTypes();
-  }, []);
-
   // 使用useEffect监听配置变化，实时检测冲突
   useEffect(() => {
     const warnings = detectConflicts(taskConfig);
     setConflictWarnings(warnings);
   }, [taskConfig]);
 
-  // 智能推荐客户类型
-  const recommendCustomerType = async () => {
-    try {
-      const response = await fetch(getApiUrl('/api/customer-types/recommend'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          profession: taskConfig.customerProfession,
-          personality: taskConfig.customerPersonality,
-          focusPoints: taskConfig.customerFocus,
-          communicationStyle: taskConfig.customerCommunication,
-          age: taskConfig.customerAge
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setRecommendedType(data.data.recommendedType);
-        console.log('Recommended customer type:', data.data);
+  // 点击外部区域关闭下拉菜单
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowRandomOptions(false);
       }
-    } catch (error) {
-      console.error('Failed to recommend customer type:', error);
-    }
-  };
+    };
 
-  // 应用客户类型配置
-  const applyCustomerType = async (customerType: string) => {
-    try {
-      const response = await fetch(getApiUrl(`/api/customer-types/${encodeURIComponent(customerType)}/config`));
-      if (response.ok) {
-        const data = await response.json();
-        const config = data.data;
-        
-        // 更新配置
-        setTaskConfig(prev => ({
-          ...prev,
-          customerType: customerType,
-          customerPersonality: config.customerPersonality || prev.customerPersonality,
-          customerProfession: config.customerProfession || prev.customerProfession,
-          customerCommunication: config.customerCommunication || prev.customerCommunication,
-          customerHobbies: config.customerHobbies || prev.customerHobbies,
-          customerGender: config.customerGender || prev.customerGender,
-          customerAge: config.customerAge || prev.customerAge,
-          customerFocus: config.customerFocus || prev.customerFocus
-        }));
-      }
-    } catch (error) {
-      console.error('Failed to apply customer type:', error);
-    }
-  };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const generatePrompt = async () => {
     try {
@@ -439,13 +512,73 @@ ${taskConfig.trainingFocus.includes('沟通维度') ? '- 根据你的沟通方�
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold text-gray-900">任务生成界面</h2>
             <div className="flex space-x-3">
+              {/* 保时捷十大客户画像下拉选择 */}
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setShowRandomOptions(!showRandomOptions)}
+                  className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 flex items-center"
+                >
+                  <span className="mr-1">🎭</span>
+                  选择客户画像
+                  <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {showRandomOptions && (
+                  <div className="absolute top-full left-0 mt-1 w-80 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-96 overflow-y-auto">
+                    <div className="p-2">
+                      <div className="text-sm text-gray-600 p-2 border-b">
+                        选择一个保时捷客户画像模板，系统将自动填充相应配置
+                      </div>
+                      {customerTypes.map((type, index) => (
+                        <button
+                          key={index}
+                          onClick={() => {
+                            // 应用模板到当前配置
+                            setTaskConfig(prev => ({
+                              ...prev,
+                              customerType: type.name,
+                              customerPersonality: type.template.customerPersonality,
+                              customerProfession: type.template.customerProfession,
+                              customerCommunication: type.template.customerCommunication,
+                              customerHobbies: type.template.customerHobbies,
+                              customerGender: type.template.customerGender,
+                              customerAge: type.template.customerAge,
+                              customerFocus: type.template.customerFocus
+                            }));
+                            setShowRandomOptions(false);
+                          }}
+                          className="w-full text-left p-3 hover:bg-purple-50 border-b border-gray-100 last:border-b-0"
+                        >
+                          <div className="font-medium text-gray-900 mb-1">{type.name}</div>
+                          <div className="text-sm text-gray-600 mb-2">{type.description}</div>
+                          <div className="flex flex-wrap gap-1">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {type.template.customerCommunication}
+                            </span>
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              {type.template.customerProfession}
+                            </span>
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                              {type.template.customerGender} {type.template.customerAge}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
               <button 
                 onClick={randomSelectAll}
-                className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 flex items-center"
+                className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 flex items-center"
               >
                 <span className="mr-1">🎲</span>
-                随机选择
+                完全随机
               </button>
+              
               <button 
                 onClick={generatePrompt}
                 className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
@@ -525,6 +658,7 @@ ${taskConfig.trainingFocus.includes('沟通维度') ? '- 根据你的沟通方�
                   ))}
                 </div>
               </div>
+
 
               {/* 冲突警告 */}
               {conflictWarnings.length > 0 && (

@@ -1,0 +1,249 @@
+{
+  "systemPrompt": {
+    "zh": "你是一位资深的汽车销售培训专家，拥有丰富的销售技能评估经验，同时你的打分非常严格，打分基本按照正态分布使μ ≈ 82分，σ ≈ 10-15分。请严格按照14个评估标准进行详细分析，确保评估结果客观、准确、有指导意义。必须返回有效的JSON格式。重要：所有分数必须是0-100之间的整数，不要使用小数。",
+    "en": "You are a professional car sales trainer with extensive experience in evaluating sales skills. Please analyze strictly according to the 14 evaluation criteria, ensuring objective, accurate, and instructive evaluation results. You MUST return a valid JSON format. Important: All scores must be integers between 0-100, do not use decimals."
+  },
+    "userPromptTemplate": {
+    "zh": "请根据以下对话内容评估销售顾问的表现。\n\n**任务背景：**\n- 任务目标：{taskGoal}\n- 销售方法论：{methodology}\n- 客户画像：{customerProfile}\n\n**对话内容：**\n{conversation}\n\n**评估要求：**\n请按照以下14个标准对销售顾问进行评估，必须返回有效的JSON格式，不要添加任何额外的文字说明。\n\n**重要：所有分数必须使用0-100的整数，不要使用小数或1-5分制。**\n\n**JSON输出格式：**\n```json\n{\n  \"overallScore\": 85,\n  \"dimensionScores\": [\n    {\n      \"dimension\": \"维度名称\",\n      \"score\": 85,\n      \"feedback\": \"该维度的整体反馈（简洁）\",\n      \"details\": [\n        {\n          \"id\": \"criteria_id\",\n          \"criteria\": \"标准名称\",\n          \"score\": 85,\n          \"feedback\": \"具体反馈（简洁）\",\n          \"evidence\": \"对话中的关键证据（简短引用）\"\n        }\n      ]\n    }\n  ],\n  \"suggestions\": [\"建议1\", \"建议2\"],\n  \"strengths\": [\"优势1\", \"优势2\"]\n}\n```\n\n**评估标准：**\n{evaluationCriteria}",
+    "en": "Please evaluate the sales consultant's performance based on the following conversation.\n\n**Task Background:**\n- Task Goal: {taskGoal}\n- Methodology: {methodology}\n- Customer Profile: {customerProfile}\n\n**Conversation:**\n{conversation}\n\n**Evaluation Instructions:**\nRate the sales consultant on the following 14 criteria. You MUST return a valid JSON object with no extra text or explanations.\n\n**JSON Output Format:**\n```json\n{\n  \"overallScore\": 0,\n  \"dimensionScores\": [\n    {\n      \"dimension\": \"Dimension Name\",\n      \"score\": 0,\n      \"feedback\": \"Overall feedback for the dimension.\",\n      \"details\": [\n        {\n          \"id\": \"criteria_id\",\n          \"criteria\": \"Criteria Name\",\n          \"score\": 0,\n          \"feedback\": \"Specific feedback and suggestions.\",\n          \"evidence\": \"A quote from the conversation.\"\n        }\n      ]\n    }\n  ],\n  \"suggestions\": [\"Actionable suggestion 1\", \"Actionable suggestion 2\"],\n  \"strengths\": [\"Strength 1\", \"Strength 2\"]\n}\n```\n\n**Criteria to Evaluate:**\n{evaluationCriteria}"
+  },
+  "evaluationCriteria": {
+    "zh": {
+      "dimensions": [
+        {
+          "id": "communication",
+          "name": "沟通维度",
+          "description": "评估销售顾问的沟通技巧和能力",
+          "criteria": [
+            {
+              "id": "criteria1",
+              "name": "匹配客户的沟通方式",
+              "description": "能够识别并适应客户的沟通风格"
+            },
+            {
+              "id": "criteria2", 
+              "name": "识别客户的沟通方式",
+              "description": "准确判断客户的沟通偏好和习惯"
+            },
+            {
+              "id": "criteria3",
+              "name": "引导沟通的方向",
+              "description": "有效引导对话朝着销售目标发展"
+            },
+            {
+              "id": "criteria4",
+              "name": "清晰的表达自己的观点",
+              "description": "能够清楚、有逻辑地表达产品信息和观点"
+            }
+          ]
+        },
+        {
+          "id": "product_knowledge",
+          "name": "本品维度",
+          "description": "评估对自家产品的了解程度",
+          "criteria": [
+            {
+              "id": "criteria5",
+              "name": "本品产品知识正确",
+              "description": "准确掌握产品的技术参数、配置和特点"
+            },
+            {
+              "id": "criteria6",
+              "name": "突出本产品的配置或者功能优势",
+              "description": "能够有效展示产品的核心卖点和竞争优势"
+            },
+            {
+              "id": "criteria7",
+              "name": "清晰的确定客户的目标车型",
+              "description": "准确识别客户需求并推荐合适的车型"
+            }
+          ]
+        },
+        {
+          "id": "competitor_knowledge",
+          "name": "竞品维度", 
+          "description": "评估对竞争对手产品的了解",
+          "criteria": [
+            {
+              "id": "criteria8",
+              "name": "了解竞品的相关知识",
+              "description": "掌握主要竞争对手的产品信息"
+            },
+            {
+              "id": "criteria9",
+              "name": "可以找出本品和竞品间的差异",
+              "description": "能够识别并阐述产品差异化优势"
+            },
+            {
+              "id": "criteria10",
+              "name": "可以客观的进行竞品和本品的对比",
+              "description": "公正客观地进行产品对比分析"
+            }
+          ]
+        },
+        {
+          "id": "customer_info_gathering",
+          "name": "客户信息获取维度",
+          "description": "评估收集客户信息的能力",
+          "criteria": [
+            {
+              "id": "criteria11",
+              "name": "了解了客户的兴趣爱好",
+              "description": "主动了解客户的个人兴趣和爱好"
+            },
+            {
+              "id": "criteria12",
+              "name": "了解了客户的职业背景",
+              "description": "获取客户的职业信息以便精准推荐"
+            },
+            {
+              "id": "criteria13",
+              "name": "可以匹配客户的性格特征，进行沟通",
+              "description": "根据客户性格调整沟通策略"
+            }
+          ]
+        },
+        {
+          "id": "methodology_adherence",
+          "name": "方法论匹配度",
+          "description": "评估销售方法论的运用情况",
+          "criteria": [
+            {
+              "id": "criteria14",
+              "name": "可以在场景中，清晰运用预设的方法论",
+              "description": "系统性地运用指定的销售方法论"
+            }
+          ]
+        }
+      ]
+    },
+    "en": {
+      "dimensions": [
+        {
+          "id": "communication",
+          "name": "Communication",
+          "description": "Evaluate communication skills and abilities",
+          "criteria": [
+            {
+              "id": "criteria1",
+              "name": "Adapts to customer's communication style",
+              "description": "Identifies and adapts to customer's communication preferences"
+            },
+            {
+              "id": "criteria2",
+              "name": "Identifies customer's communication style", 
+              "description": "Accurately judges customer's communication preferences and habits"
+            },
+            {
+              "id": "criteria3",
+              "name": "Guides the conversation effectively",
+              "description": "Effectively guides conversation towards sales objectives"
+            },
+            {
+              "id": "criteria4",
+              "name": "Expresses ideas clearly",
+              "description": "Clearly and logically expresses product information and viewpoints"
+            }
+          ]
+        },
+        {
+          "id": "product_knowledge",
+          "name": "Product Knowledge",
+          "description": "Evaluate knowledge of own products",
+          "criteria": [
+            {
+              "id": "criteria5",
+              "name": "Accurate product knowledge",
+              "description": "Accurately masters product specifications, configurations and features"
+            },
+            {
+              "id": "criteria6",
+              "name": "Highlights product features and benefits",
+              "description": "Effectively showcases core selling points and competitive advantages"
+            },
+            {
+              "id": "criteria7",
+              "name": "Identifies customer's target vehicle",
+              "description": "Accurately identifies customer needs and recommends suitable models"
+            }
+          ]
+        },
+        {
+          "id": "competitor_knowledge",
+          "name": "Competitor Knowledge",
+          "description": "Evaluate knowledge of competitor products",
+          "criteria": [
+            {
+              "id": "criteria8",
+              "name": "Knowledge of competitor products",
+              "description": "Masters information about main competitors' products"
+            },
+            {
+              "id": "criteria9",
+              "name": "Differentiates between own and competitor products",
+              "description": "Identifies and articulates differentiated advantages"
+            },
+            {
+              "id": "criteria10",
+              "name": "Objective comparison",
+              "description": "Conducts fair and objective product comparisons"
+            }
+          ]
+        },
+        {
+          "id": "customer_info_gathering",
+          "name": "Customer Information Gathering",
+          "description": "Evaluate ability to collect customer information",
+          "criteria": [
+            {
+              "id": "criteria11",
+              "name": "Uncovers customer's hobbies and interests",
+              "description": "Proactively learns about customer's personal interests and hobbies"
+            },
+            {
+              "id": "criteria12",
+              "name": "Learns about customer's professional background",
+              "description": "Obtains customer's professional information for precise recommendations"
+            },
+            {
+              "id": "criteria13",
+              "name": "Matches communication to customer's personality",
+              "description": "Adjusts communication strategy based on customer personality"
+            }
+          ]
+        },
+        {
+          "id": "methodology_adherence",
+          "name": "Methodology Adherence",
+          "description": "Evaluate application of sales methodology",
+          "criteria": [
+            {
+              "id": "criteria14",
+              "name": "Applies the specified methodology",
+              "description": "Systematically applies the designated sales methodology"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "conversationFormatting": {
+    "roleMapping": {
+      "student": "Sales",
+      "ai_customer": "Customer",
+      "customer": "Customer"
+    },
+    "emptyMessagePlaceholder": "[无内容]",
+    "minConversationLength": 2,
+    "filterEmptyMessages": true
+  },
+  "responseValidation": {
+    "requiredFields": ["overallScore", "dimensionScores", "suggestions", "strengths"],
+    "scoreRange": {
+      "min": 0,
+      "max": 100
+    },
+    "dimensionCount": 5,
+    "criteriaCount": 14
+  }
+}

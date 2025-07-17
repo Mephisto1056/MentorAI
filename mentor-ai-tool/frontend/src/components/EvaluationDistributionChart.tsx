@@ -15,21 +15,21 @@ import {
 
 // 模拟数据 - AI评分 vs Mentor评分
 const evaluationData = [
-  { aiScore: 85, mentorScore: 88, student: '张三', count: 3 },
-  { aiScore: 92, mentorScore: 89, student: '李四', count: 2 },
-  { aiScore: 78, mentorScore: 82, student: '王五', count: 4 },
-  { aiScore: 88, mentorScore: 91, student: '赵六', count: 1 },
-  { aiScore: 76, mentorScore: 79, student: '钱七', count: 3 },
-  { aiScore: 94, mentorScore: 92, student: '孙八', count: 2 },
-  { aiScore: 82, mentorScore: 85, student: '周九', count: 5 },
-  { aiScore: 90, mentorScore: 87, student: '吴十', count: 2 },
-  { aiScore: 87, mentorScore: 90, student: '郑十一', count: 3 },
-  { aiScore: 79, mentorScore: 83, student: '王十二', count: 4 },
-  { aiScore: 91, mentorScore: 94, student: '李十三', count: 1 },
-  { aiScore: 83, mentorScore: 86, student: '张十四', count: 3 },
-  { aiScore: 89, mentorScore: 88, student: '陈十五', count: 2 },
-  { aiScore: 77, mentorScore: 81, student: '刘十六', count: 4 },
-  { aiScore: 93, mentorScore: 91, student: '黄十七', count: 2 },
+  { aiScore: 85, mentorScore: 88, student: 'Amy', count: 3 },
+  { aiScore: 92, mentorScore: 89, student: 'Andy', count: 2 },
+  { aiScore: 78, mentorScore: 82, student: 'Bob', count: 4 },
+  { aiScore: 88, mentorScore: 91, student: 'Carol', count: 1 },
+  { aiScore: 76, mentorScore: 79, student: 'David', count: 3 },
+  { aiScore: 94, mentorScore: 92, student: 'Emma', count: 2 },
+  { aiScore: 82, mentorScore: 85, student: 'Frank', count: 5 },
+  { aiScore: 90, mentorScore: 87, student: 'Grace', count: 2 },
+  { aiScore: 87, mentorScore: 90, student: 'Henry', count: 3 },
+  { aiScore: 79, mentorScore: 83, student: 'Ivy', count: 4 },
+  { aiScore: 91, mentorScore: 94, student: 'Jack', count: 1 },
+  { aiScore: 83, mentorScore: 86, student: 'Kate', count: 3 },
+  { aiScore: 89, mentorScore: 88, student: 'Leo', count: 2 },
+  { aiScore: 77, mentorScore: 81, student: 'Mia', count: 4 },
+  { aiScore: 93, mentorScore: 91, student: 'Nick', count: 2 },
 ];
 
 // 自定义Tooltip
@@ -60,12 +60,10 @@ const getPointColor = (aiScore: number, mentorScore: number) => {
 };
 
 interface EvaluationDistributionChartProps {
-  onViewLarge?: () => void;
   isLargeView?: boolean;
 }
 
 export default function EvaluationDistributionChart({ 
-  onViewLarge, 
   isLargeView = false 
 }: EvaluationDistributionChartProps) {
   const [hoveredPoint, setHoveredPoint] = useState<any>(null);
@@ -81,17 +79,6 @@ export default function EvaluationDistributionChart({
           </h3>
           <p className="text-sm text-gray-500 mt-1">AI评分 vs Mentor评分对比分析</p>
         </div>
-        {!isLargeView && (
-          <button
-            onClick={onViewLarge}
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center"
-          >
-            查看大图
-            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-            </svg>
-          </button>
-        )}
       </div>
 
       <div style={{ height: chartHeight }}>
@@ -124,17 +111,6 @@ export default function EvaluationDistributionChart({
               fontSize={12}
             />
             <Tooltip content={<CustomTooltip />} />
-            
-            {/* 理想线 - AI评分 = Mentor评分 */}
-            <line
-              x1="70"
-              y1="70"
-              x2="100"
-              y2="100"
-              stroke="#d1d5db"
-              strokeWidth={2}
-              strokeDasharray="5,5"
-            />
             
             <Scatter 
               name="评分对比" 

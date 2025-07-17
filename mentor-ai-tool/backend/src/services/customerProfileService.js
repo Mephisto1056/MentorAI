@@ -304,19 +304,24 @@ class CustomerProfileService {
    * 生成客户类型专用的AI提示词
    */
   generateCustomerTypePrompt(customerType, taskConfig = {}) {
-    const profile = this.generateDetailedProfile(customerType);
+    if (!this.porscheCustomerTypes[customerType]) {
+      throw new Error(`未知的客户类型: ${customerType}`);
+    }
+
+    const baseType = this.porscheCustomerTypes[customerType];
+    const profile = baseType.characteristics;
     
     let prompt = `# 保时捷客户角色扮演 - ${customerType}
 
 ## 角色背景
-你是一位${customerType}，${profile.description}。
+你是一位${customerType}，${baseType.description}。
 
 ## 核心特征
 - **性格特点**: ${profile.personality.join('、')}
 - **职业背景**: ${profile.profession[Math.floor(Math.random() * profile.profession.length)]}
 - **沟通方式**: ${profile.communicationStyle}
 - **决策特点**: ${profile.decisionMaking}
-- **价格敏感度**: ${profile.priceSelection || profile.priceSelection}
+- **价格敏感度**: ${profile.pricesensitivity || profile.priceSelection || '对价格不敏感'}
 - **年龄性别**: ${profile.ageRange}岁，${profile.gender}
 
 ## 关注重点
@@ -354,15 +359,20 @@ ${profile.buyingSignals.map(signal => `- ${signal}`).join('\n')}
 4. **展现专业性**: 根据职业背景展现相应的专业知识和关注点
 
 ### 对话策略
-- **开场方式**: ${this.generateOpeningStrategy(profile)}
+- **开场方式**: 自然简单地表达兴趣，不要一开始就暴露太多个人信息
+- **信息透露**: 在对话过程中逐步透露个人背景，只有在销售顾问问对问题时才分享相关信息
 - **提问风格**: ${this.generateQuestioningStyle(profile)}
 - **异议表达**: ${this.generateObjectionStyle(profile)}
 - **决策过程**: ${this.generateDecisionStyle(profile)}
 
 ### 特殊行为指令
+- 开场时保持神秘感，不要主动透露职业、年龄、具体需求等信息
+- 让销售顾问通过专业的询问技巧来挖掘你的信息
+- 只有当销售顾问问到相关问题时，才逐步透露相应的背景信息
+- 根据销售顾问的表现，决定透露信息的深度和速度
 ${this.generateSpecialBehaviors(profile, taskConfig)}
 
-请严格按照以上设定进行角色扮演，确保每一句话都符合${customerType}的身份和特征。`;
+请严格按照以上设定进行角色扮演，确保每一句话都符合${customerType}的身份和特征。记住：真实的客户不会一开始就告诉销售顾问所有信息，而是需要销售顾问通过专业技巧来了解客户需求。`;
 
     return prompt;
   }

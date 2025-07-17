@@ -10,12 +10,15 @@ class AIVoiceService {
   async generateCustomerResponse(conversation, customerProfile, taskConfig, aiPrompt = null) {
     try {
       // 如果传递了aiPrompt，优先使用；否则生成新的prompt
-      const systemPrompt = aiPrompt || aiCharacterService.generateCustomerPrompt(taskConfig);
-      
+      let systemPrompt;
       if (aiPrompt) {
         logger.info('Using provided AI prompt for customer response');
+        systemPrompt = aiPrompt;
       } else {
         logger.info('Generating new prompt from task config');
+        const promptResult = aiCharacterService.generateCustomerPrompt(taskConfig);
+        // 处理新的返回格式（包含prompt和customerType）
+        systemPrompt = typeof promptResult === 'object' ? promptResult.prompt : promptResult;
       }
       
       // 转换对话格式

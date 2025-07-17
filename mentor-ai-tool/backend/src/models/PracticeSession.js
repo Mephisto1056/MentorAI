@@ -71,11 +71,40 @@ const practiceSessionSchema = new mongoose.Schema({
       feedback: {
         type: String,
         maxlength: [500, 'Feedback cannot be more than 500 characters']
-      }
+      },
+      // 添加详细标准评分
+      details: [{
+        id: {
+          type: String,
+          required: true
+        },
+        criteria: {
+          type: String,
+          required: true
+        },
+        score: {
+          type: Number,
+          required: true,
+          min: 0,
+          max: 100
+        },
+        feedback: {
+          type: String,
+          maxlength: [300, 'Detail feedback cannot be more than 300 characters']
+        },
+        evidence: {
+          type: String,
+          maxlength: [200, 'Evidence cannot be more than 200 characters']
+        }
+      }]
     }],
     suggestions: [{
       type: String,
       maxlength: [200, 'Suggestion cannot be more than 200 characters']
+    }],
+    strengths: [{
+      type: String,
+      maxlength: [200, 'Strength cannot be more than 200 characters']
     }],
     generatedAt: {
       type: Date

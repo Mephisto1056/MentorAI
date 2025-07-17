@@ -21,6 +21,7 @@ interface PendingSession {
     overallScore: number;
     dimensionScores: any[];
   };
+  aiEvaluationStatus?: string;
 }
 
 interface SessionDetail {
@@ -80,10 +81,13 @@ const EVALUATION_CRITERIA = [
 
 export default function MentorEvaluation() {
   const [pendingSessions, setPendingSessions] = useState<PendingSession[]>([]);
+  const [evaluatedSessions, setEvaluatedSessions] = useState<PendingSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<SessionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [evaluating, setEvaluating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeListTab, setActiveListTab] = useState<'pending' | 'evaluated'>('pending');
+  const [aiEvaluationStatus, setAiEvaluationStatus] = useState<string>('unknown');
   
   // 只使用详细评估模式
   const [feedback, setFeedback] = useState<string>('');
@@ -108,7 +112,29 @@ export default function MentorEvaluation() {
 
   useEffect(() => {
     fetchPendingSessions();
+    fetchEvaluatedSessions();
+    
+    // 设置定期刷新待评估列表，以更新AI评估状态
+    const refreshInterval = setInterval(() => {
+      fetchPendingSessions();
+    }, 10000); // 每10秒刷新一次
+    
+    return () => clearInterval(refreshInterval);
   }, []);
+
+  // 监控AI评估状态
+  useEffect(() => {
+    if (selectedSession?.sessionId) {
+      checkAIEvaluationStatus(selectedSession.sessionId);
+      
+      // 如果AI评估正在进行中，设置定时器检查状态
+      const interval = setInterval(() => {
+        checkAIEvaluationStatus(selectedSession.sessionId);
+      }, 3000); // 每3秒检查一次
+
+      return () => clearInterval(interval);
+    }
+  }, [selectedSession?.sessionId]);
 
   const fetchPendingSessions = async () => {
     try {
@@ -117,14 +143,34 @@ export default function MentorEvaluation() {
       if (response.ok) {
         const result = await response.json();
         setPendingSessions(result.data || []);
+        setError(null); // 清除之前的错误
       } else {
-        setError('获取待评估会话失败');
+        console.warn('获取待评估会话失败，使用空列表');
+        setPendingSessions([]); // 设置为空数组而不是显示错误
+        setError(null);
       }
     } catch (err) {
       console.error('Fetch pending sessions error:', err);
-      setError('网络错误，请稍后重试');
+      console.warn('网络错误，使用空列表');
+      setPendingSessions([]); // 设置为空数组而不是显示错误
+      setError(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchEvaluatedSessions = async () => {
+    try {
+      const response = await fetch(getApiUrl('/api/evaluations/history'));
+      
+      if (response.ok) {
+        const result = await response.json();
+        setEvaluatedSessions(result.data || []);
+      } else {
+        console.error('获取已评估会话失败');
+      }
+    } catch (err) {
+      console.error('Fetch evaluated sessions error:', err);
     }
   };
 
@@ -137,39 +183,55 @@ export default function MentorEvaluation() {
         setSelectedSession(result.data);
         setActiveTab('conversation');
         
+        // 设置AI评估状态
+        setAiEvaluationStatus(result.data.aiEvaluationStatus || 'unknown');
+        
         // 如果有AI评估，设置详细评分的初始值
         if (result.data.aiEvaluation?.dimensionScores) {
           const aiScores = result.data.aiEvaluation.dimensionScores;
           const newDetailedScores = { ...detailedScores };
           
-          // 根据AI评估的维度分数设置初始值
+          // 根据AI评估的具体标准分数设置初始值
           aiScores.forEach((dimension: any) => {
-            const score = dimension.score || 80;
-            switch (dimension.dimension) {
-              case '沟通维度':
-                newDetailedScores.criteria1 = score;
-                newDetailedScores.criteria2 = score;
-                newDetailedScores.criteria3 = score;
-                newDetailedScores.criteria4 = score;
-                break;
-              case '本品维度':
-                newDetailedScores.criteria5 = score;
-                newDetailedScores.criteria6 = score;
-                newDetailedScores.criteria7 = score;
-                break;
-              case '竞品维度':
-                newDetailedScores.criteria8 = score;
-                newDetailedScores.criteria9 = score;
-                newDetailedScores.criteria10 = score;
-                break;
-              case '客户信息获取维度':
-                newDetailedScores.criteria11 = score;
-                newDetailedScores.criteria12 = score;
-                newDetailedScores.criteria13 = score;
-                break;
-              case '方法论匹配度':
-                newDetailedScores.criteria14 = score;
-                break;
+            if (dimension.details && dimension.details.length > 0) {
+              // 使用具体标准的分数
+              dimension.details.forEach((detail: any) => {
+                if (detail.id && typeof detail.score === 'number') {
+                  const criteriaKey = detail.id as keyof DetailedScores;
+                  if (criteriaKey in newDetailedScores) {
+                    newDetailedScores[criteriaKey] = Math.round(detail.score);
+                  }
+                }
+              });
+            } else {
+              // 如果没有详细分数，使用维度分数作为默认值
+              const score = Math.round(dimension.score || 75);
+              switch (dimension.dimension) {
+                case '沟通维度':
+                  newDetailedScores.criteria1 = score;
+                  newDetailedScores.criteria2 = score;
+                  newDetailedScores.criteria3 = score;
+                  newDetailedScores.criteria4 = score;
+                  break;
+                case '本品维度':
+                  newDetailedScores.criteria5 = score;
+                  newDetailedScores.criteria6 = score;
+                  newDetailedScores.criteria7 = score;
+                  break;
+                case '竞品维度':
+                  newDetailedScores.criteria8 = score;
+                  newDetailedScores.criteria9 = score;
+                  newDetailedScores.criteria10 = score;
+                  break;
+                case '客户信息获取维度':
+                  newDetailedScores.criteria11 = score;
+                  newDetailedScores.criteria12 = score;
+                  newDetailedScores.criteria13 = score;
+                  break;
+                case '方法论匹配度':
+                  newDetailedScores.criteria14 = score;
+                  break;
+              }
             }
           });
           
@@ -181,6 +243,25 @@ export default function MentorEvaluation() {
     } catch (err) {
       console.error('Fetch session detail error:', err);
       setError('网络错误，请稍后重试');
+    }
+  };
+
+  const checkAIEvaluationStatus = async (sessionId: string) => {
+    try {
+      const response = await fetch(getApiUrl(`/api/sessions/${sessionId}/ai-evaluation-status`));
+      
+      if (response.ok) {
+        const result = await response.json();
+        const status = result.data.aiEvaluationStatus;
+        setAiEvaluationStatus(status);
+        
+        // 如果AI评估完成，重新获取会话详情以更新AI评估结果
+        if (status === 'completed' && aiEvaluationStatus === 'in_progress') {
+          fetchSessionDetail(sessionId);
+        }
+      }
+    } catch (err) {
+      console.error('Check AI evaluation status error:', err);
     }
   };
 
@@ -240,13 +321,13 @@ export default function MentorEvaluation() {
 
   // 计算详细评分的各维度平均分和总分
   const calculateDetailedAverages = () => {
-    const communication = Math.round((detailedScores.criteria1 + detailedScores.criteria2 + detailedScores.criteria3 + detailedScores.criteria4) / 4);
-    const ownProduct = Math.round((detailedScores.criteria5 + detailedScores.criteria6 + detailedScores.criteria7) / 3);
-    const competitor = Math.round((detailedScores.criteria8 + detailedScores.criteria9 + detailedScores.criteria10) / 3);
-    const customerInfo = Math.round((detailedScores.criteria11 + detailedScores.criteria12 + detailedScores.criteria13) / 3);
-    const methodology = detailedScores.criteria14;
+    const communication = Math.floor((detailedScores.criteria1 + detailedScores.criteria2 + detailedScores.criteria3 + detailedScores.criteria4) / 4);
+    const ownProduct = Math.floor((detailedScores.criteria5 + detailedScores.criteria6 + detailedScores.criteria7) / 3);
+    const competitor = Math.floor((detailedScores.criteria8 + detailedScores.criteria9 + detailedScores.criteria10) / 3);
+    const customerInfo = Math.floor((detailedScores.criteria11 + detailedScores.criteria12 + detailedScores.criteria13) / 3);
+    const methodology = Math.floor(detailedScores.criteria14);
     
-    const overall = Math.round(Object.values(detailedScores).reduce((sum, score) => sum + score, 0) / 14);
+    const overall = Math.floor(Object.values(detailedScores).reduce((sum, score) => sum + score, 0) / 14);
     
     return { communication, ownProduct, competitor, customerInfo, methodology, overall };
   };
@@ -338,52 +419,153 @@ export default function MentorEvaluation() {
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* 待评估列表 */}
+            {/* 会话列表 */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-lg shadow">
+                {/* 标签页切换 */}
                 <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-medium text-gray-900">待评估会话</h3>
+                  <div className="flex space-x-4">
+                    <button
+                      onClick={() => setActiveListTab('pending')}
+                      className={`px-3 py-2 text-sm font-medium rounded-md ${
+                        activeListTab === 'pending'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      待评估 ({pendingSessions.length})
+                    </button>
+                    <button
+                      onClick={() => setActiveListTab('evaluated')}
+                      className={`px-3 py-2 text-sm font-medium rounded-md ${
+                        activeListTab === 'evaluated'
+                          ? 'bg-green-100 text-green-700'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      已评估 ({evaluatedSessions.length})
+                    </button>
+                  </div>
                 </div>
+
+                {/* 会话列表内容 */}
                 <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
-                  {pendingSessions.length === 0 ? (
-                    <div className="p-6 text-center text-gray-500">
-                      暂无待评估的会话
-                    </div>
-                  ) : (
-                    pendingSessions.map((session) => (
-                      <div
-                        key={session._id}
-                        onClick={() => fetchSessionDetail(session._id)}
-                        className={`p-4 cursor-pointer hover:bg-gray-50 ${
-                          selectedSession?.sessionId === session._id ? 'bg-blue-50 border-l-4 border-blue-500' : ''
-                        }`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <h4 className="text-sm font-medium text-gray-900 truncate">
-                              {session.sessionName}
-                            </h4>
-                            <p className="text-xs text-gray-600 mt-1">
-                              学员: {session.studentId?.profile?.name || session.studentId?.username || '未知学员'}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              提交: {new Date(session.submittedAt).toLocaleDateString('zh-CN')}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              时长: {session.duration}分钟
-                            </p>
-                          </div>
-                          {session.aiEvaluation && (
-                            <div className="text-right">
-                              <div className={`text-sm font-bold ${getScoreColor(session.aiEvaluation.overallScore)}`}>
-                                {session.aiEvaluation.overallScore}
-                              </div>
-                              <div className="text-xs text-gray-500">AI评分</div>
-                            </div>
-                          )}
-                        </div>
+                  {activeListTab === 'pending' ? (
+                    pendingSessions.length === 0 ? (
+                      <div className="p-6 text-center text-gray-500">
+                        暂无待评估的会话
                       </div>
-                    ))
+                    ) : (
+                      pendingSessions.map((session) => (
+                        <div
+                          key={session._id}
+                          onClick={() => fetchSessionDetail(session._id)}
+                          className={`p-4 cursor-pointer hover:bg-gray-50 ${
+                            selectedSession?.sessionId === session._id ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+                          }`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <h4 className="text-sm font-medium text-gray-900 truncate">
+                                  {session.sessionName}
+                                </h4>
+                                {/* AI评估状态指示器 */}
+                                {(!session.aiEvaluation || session.aiEvaluationStatus === 'in_progress') && (
+                                  <div className="flex items-center space-x-1">
+                                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
+                                    <span className="text-xs text-blue-600">AI正在运行</span>
+                                  </div>
+                                )}
+                                {session.aiEvaluation && session.aiEvaluationStatus === 'completed' && (
+                                  <span className="text-xs text-green-600 flex items-center">
+                                    <span className="mr-1">✅</span>
+                                    AI已完成
+                                  </span>
+                                )}
+                                {session.aiEvaluationStatus === 'failed' && (
+                                  <span className="text-xs text-red-600 flex items-center">
+                                    <span className="mr-1">❌</span>
+                                    AI失败
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-600 mt-1">
+                                学员: {session.studentId?.profile?.name || session.studentId?.username || '未知学员'}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                提交: {new Date(session.submittedAt).toLocaleDateString('zh-CN')}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                时长: {session.duration}分钟
+                              </p>
+                            </div>
+                            {session.aiEvaluation && session.aiEvaluation.overallScore != null && !isNaN(session.aiEvaluation.overallScore) && (
+                              <div className="text-right">
+                                <div className={`text-sm font-bold ${getScoreColor(Math.round(session.aiEvaluation.overallScore))}`}>
+                                  {Math.round(session.aiEvaluation.overallScore)}
+                                </div>
+                                <div className="text-xs text-gray-500">AI评分</div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )
+                  ) : (
+                    evaluatedSessions.length === 0 ? (
+                      <div className="p-6 text-center text-gray-500">
+                        暂无已评估的会话
+                      </div>
+                    ) : (
+                      evaluatedSessions.map((session: any) => (
+                        <div
+                          key={session._id}
+                          onClick={() => fetchSessionDetail(session._id)}
+                          className={`p-4 cursor-pointer hover:bg-gray-50 ${
+                            selectedSession?.sessionId === session._id ? 'bg-green-50 border-l-4 border-green-500' : ''
+                          }`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <h4 className="text-sm font-medium text-gray-900 truncate">
+                                {session.sessionName}
+                              </h4>
+                              <p className="text-xs text-gray-600 mt-1">
+                                学员: {session.studentId?.profile?.name || session.studentId?.username || '未知学员'}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                提交: {new Date(session.submittedAt).toLocaleDateString('zh-CN')}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                时长: {session.duration}分钟
+                              </p>
+                              {session.mentorEvaluation?.evaluatedAt && (
+                                <p className="text-xs text-green-600 mt-1">
+                                  ✅ 已评估: {new Date(session.mentorEvaluation.evaluatedAt).toLocaleDateString('zh-CN')}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              {session.aiEvaluation && session.aiEvaluation.overallScore != null && !isNaN(session.aiEvaluation.overallScore) && (
+                                <div className="mb-1">
+                                  <div className={`text-xs font-bold ${getScoreColor(Math.round(session.aiEvaluation.overallScore))}`}>
+                                    AI: {Math.round(session.aiEvaluation.overallScore)}
+                                  </div>
+                                </div>
+                              )}
+                              {session.mentorEvaluation && session.mentorEvaluation.overallScore != null && !isNaN(session.mentorEvaluation.overallScore) && (
+                                <div>
+                                  <div className={`text-sm font-bold ${getScoreColor(Math.round(session.mentorEvaluation.overallScore))}`}>
+                                    M: {Math.round(session.mentorEvaluation.overallScore)}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )
                   )}
                 </div>
               </div>
@@ -395,7 +577,7 @@ export default function MentorEvaluation() {
                 <div className="space-y-6">
                   {/* 会话信息 */}
                   <div className="bg-white rounded-lg shadow p-6">
-                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex justify-between items-start mb-4">
                       <div>
                         <h2 className="text-xl font-bold text-gray-900">{selectedSession.sessionName}</h2>
                         <div className="mt-2 space-y-1 text-sm text-gray-600">
@@ -405,16 +587,51 @@ export default function MentorEvaluation() {
                           <p>客户: {selectedSession.customerProfile?.name} ({selectedSession.customerProfile?.profession})</p>
                           <p>提交时间: {new Date(selectedSession.submittedAt).toLocaleString('zh-CN')}</p>
                           <p>对话时长: {selectedSession.duration}分钟</p>
+                          
+                          {/* AI评估状态显示 */}
+                          <div className="flex items-center space-x-2">
+                            <span>AI评估状态:</span>
+                            {aiEvaluationStatus === 'in_progress' && (
+                              <div className="flex items-center space-x-1 text-blue-600">
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                                <span className="text-xs">正在评估中...</span>
+                              </div>
+                            )}
+                            {aiEvaluationStatus === 'completed' && (
+                              <span className="text-xs text-green-600 flex items-center">
+                                <span className="mr-1">✅</span>
+                                评估完成
+                              </span>
+                            )}
+                            {aiEvaluationStatus === 'failed' && (
+                              <span className="text-xs text-red-600 flex items-center">
+                                <span className="mr-1">❌</span>
+                                评估失败
+                              </span>
+                            )}
+                            {aiEvaluationStatus === 'unknown' && (
+                              <span className="text-xs text-gray-500">状态未知</span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      {selectedSession.aiEvaluation && (
-                        <div className="text-right">
-                          <div className={`text-2xl font-bold ${getScoreColor(selectedSession.aiEvaluation.overallScore)}`}>
-                            {selectedSession.aiEvaluation.overallScore}
+                      <div className="text-right">
+                        {selectedSession.aiEvaluation && selectedSession.aiEvaluation.overallScore != null && !isNaN(selectedSession.aiEvaluation.overallScore) ? (
+                          <div>
+                            <div className={`text-2xl font-bold ${getScoreColor(Math.round(selectedSession.aiEvaluation.overallScore))}`}>
+                              {Math.round(selectedSession.aiEvaluation.overallScore)}
+                            </div>
+                            <div className="text-sm text-gray-500">AI综合评分</div>
                           </div>
-                          <div className="text-sm text-gray-500">AI综合评分</div>
-                        </div>
-                      )}
+                        ) : (
+                          <div>
+                            <div className="flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                            </div>
+                            <div className="text-sm text-gray-500 mt-2">AI评分中</div>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* 标签页 */}
@@ -485,8 +702,8 @@ export default function MentorEvaluation() {
                             <div key={index} className="border border-gray-200 rounded-lg p-4">
                               <div className="flex justify-between items-center mb-2">
                                 <h4 className="text-md font-medium text-gray-900">{dimension.dimension}</h4>
-                                <span className={`text-lg font-bold ${getScoreColor(dimension.score)}`}>
-                                  {dimension.score}
+                                <span className={`text-lg font-bold ${getScoreColor(Math.round(dimension.score))}`}>
+                                  {Math.round(dimension.score)}
                                 </span>
                               </div>
                               <p className="text-sm text-gray-600">{dimension.feedback}</p>
@@ -497,8 +714,8 @@ export default function MentorEvaluation() {
                                     <div key={detailIndex} className="bg-gray-50 p-2 rounded text-xs">
                                       <div className="flex justify-between items-center">
                                         <span className="font-medium">{detail.criteria}</span>
-                                        <span className={`font-bold ${getScoreColor(detail.score)}`}>
-                                          {detail.score}
+                                        <span className={`font-bold ${getScoreColor(Math.round(detail.score))}`}>
+                                          {Math.round(detail.score)}
                                         </span>
                                       </div>
                                       <p className="text-gray-600 mt-1">{detail.feedback}</p>
@@ -686,7 +903,7 @@ export default function MentorEvaluation() {
                                       {aiDetail && (
                                         <div className="mt-2 p-2 bg-blue-50 border-l-4 border-blue-300 rounded-r-lg">
                                           <p className="text-xs text-blue-800">
-                                            <span className="font-bold">AI评分: {aiDetail.score}</span> - {aiDetail.feedback}
+                                            <span className="font-bold">AI评分: {Math.round(aiDetail.score)}</span> - {aiDetail.feedback}
                                           </p>
                                           {aiDetail.evidence && (
                                             <p className="text-xs text-gray-600 italic mt-1">

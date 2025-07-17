@@ -154,7 +154,8 @@ router.post('/generate-prompt', async (req, res) => {
 
     res.json({
       success: true,
-      prompt: optimizedPrompt
+      prompt: optimizedPrompt.prompt,
+      customerType: optimizedPrompt.customerType
     });
 
     logger.info('Optimized prompt generated successfully');

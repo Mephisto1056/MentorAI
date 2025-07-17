@@ -76,13 +76,11 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 interface TaskCompletionTrendChartProps {
   timeRange: string;
-  onViewLarge?: () => void;
   isLargeView?: boolean;
 }
 
 export default function TaskCompletionTrendChart({ 
   timeRange,
-  onViewLarge, 
   isLargeView = false 
 }: TaskCompletionTrendChartProps) {
   const [chartType, setChartType] = useState<'line' | 'area'>('area');
@@ -198,17 +196,6 @@ export default function TaskCompletionTrendChart({
                 线图
               </button>
             </div>
-          )}
-          {!isLargeView && (
-            <button
-              onClick={onViewLarge}
-              className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center"
-            >
-              查看大图
-              <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-              </svg>
-            </button>
           )}
         </div>
       </div>
