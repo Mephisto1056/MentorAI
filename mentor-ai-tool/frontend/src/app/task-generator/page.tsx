@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -36,7 +37,13 @@ export default function TaskGenerator(): React.JSX.Element {
   const [conflictWarnings, setConflictWarnings] = useState<string[]>([]);
   const [showCustomerTemplates, setShowCustomerTemplates] = useState(false);
   const [showRandomOptions, setShowRandomOptions] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setIsLoaded(true);
+  }, []);
+
   const [customerTypes] = useState([
     {
       name: '成功企业家',
@@ -298,105 +305,73 @@ ${taskConfig.taskGoal || '未设置'}
 ## 销售方法论
 ${taskConfig.methodology || '未设置'}${trainingFocusText}
 
-## 客户画像
+## 客户基本信息
+- **姓名**: 请自行设定一个符合背景的中文姓名
+- **职业**: ${taskConfig.customerProfession || '未设置'}
+- **性别**: ${taskConfig.customerGender || '未设置'}
+- **年龄**: ${taskConfig.customerAge || '未设置'}
 - **性格特征**: ${taskConfig.customerPersonality.join('、') || '未设置'}
-- **职业背景**: ${taskConfig.customerProfession || '未设置'}
 - **沟通方式**: ${taskConfig.customerCommunication || '未设置'}
 - **兴趣爱好**: ${taskConfig.customerHobbies.join('、') || '未设置'}
-- **性别年龄**: ${taskConfig.customerGender} ${taskConfig.customerAge}
 
-## 本品维度
+## 车辆信息
 - **现驾车型**: ${taskConfig.currentVehicle || '未设置'}
 - **意向车型**: ${taskConfig.interestedVehicle || '未设置'}
 - **关注重点**: ${taskConfig.customerFocus.join('、') || '未设置'}
 
-## 竞品维度
-- **现驾车型**: ${taskConfig.competitorCurrent || '未设置'}
-- **意向车型**: ${taskConfig.competitorInterested || '未设置'}
-- **关注重点**: ${taskConfig.competitorFocus.join('、') || '未设置'}
+## 竞品信息
+- **竞品现驾**: ${taskConfig.competitorCurrent || '未设置'}
+- **竞品意向**: ${taskConfig.competitorInterested || '未设置'}
+- **竞品关注点**: ${taskConfig.competitorFocus.join('、') || '未设置'}
 
-## 交易相关
-- **洽谈环节**: ${taskConfig.negotiationStage || '未设置'}
-- **交易关注点**: ${taskConfig.transactionConcerns.join('、') || '未设置'}
+## 交易信息
+- **谈判阶段**: ${taskConfig.negotiationStage || '未设置'}
+- **交易顾虑**: ${taskConfig.transactionConcerns.join('、') || '未设置'}
 
-请根据以上设定扮演一位真实的客户，与销售顾问进行自然对话。
-${taskConfig.trainingFocus.length > 0 ? `
-特别注意：
-${taskConfig.trainingFocus.includes('沟通维度') ? '- 根据你的沟通方式特点进行对话，测试销售顾问的沟通适应能力\n' : ''}${taskConfig.trainingFocus.includes('本品维度') ? '- 重点询问产品相关问题，测试销售顾问的产品知识和优势展示能力\n' : ''}${taskConfig.trainingFocus.includes('竞品维度') ? '- 主动提及竞品对比，测试销售顾问的竞品分析和差异化说明能力\n' : ''}${taskConfig.trainingFocus.includes('客户信息获取维度') ? '- 适度隐藏个人信息，测试销售顾问的信息挖掘和需求识别能力\n' : ''}` : ''}
+## 角色扮演要求
+请根据以上信息扮演一位对保时捷感兴趣的客户，在对话中：
+1. 保持角色的一致性和真实性
+2. 根据性格特征和沟通方式调整对话风格
+3. 适当展现对车型的了解程度和购买意向
+4. 在适当时机提出相关问题和顾虑
+5. 根据销售人员的表现给出相应的反应
+
+请开始角色扮演，首先进行自我介绍并表达来意。
         `;
         setGeneratedPrompt(prompt);
       }
     } catch (error) {
-      console.error('Failed to generate prompt:', error);
-      // 错误时使用简单拼接方式
-      const trainingFocusText = taskConfig.trainingFocus.length > 0 
-        ? `\n## 训练重点\n本次对话将重点训练以下维度：${taskConfig.trainingFocus.join('、')}\n请在对话中特别关注这些方面的表现。`
-        : '';
-
-      const prompt = `
-# AI客户角色设定
-
-## 任务目标
-${taskConfig.taskGoal || '未设置'}
-
-## 销售方法论
-${taskConfig.methodology || '未设置'}${trainingFocusText}
-
-## 客户画像
-- **性格特征**: ${taskConfig.customerPersonality.join('、') || '未设置'}
-- **职业背景**: ${taskConfig.customerProfession || '未设置'}
-- **沟通方式**: ${taskConfig.customerCommunication || '未设置'}
-- **兴趣爱好**: ${taskConfig.customerHobbies.join('、') || '未设置'}
-- **性别年龄**: ${taskConfig.customerGender} ${taskConfig.customerAge}
-
-## 本品维度
-- **现驾车型**: ${taskConfig.currentVehicle || '未设置'}
-- **意向车型**: ${taskConfig.interestedVehicle || '未设置'}
-- **关注重点**: ${taskConfig.customerFocus.join('、') || '未设置'}
-
-## 竞品维度
-- **现驾车型**: ${taskConfig.competitorCurrent || '未设置'}
-- **意向车型**: ${taskConfig.competitorInterested || '未设置'}
-- **关注重点**: ${taskConfig.competitorFocus.join('、') || '未设置'}
-
-## 交易相关
-- **洽谈环节**: ${taskConfig.negotiationStage || '未设置'}
-- **交易关注点**: ${taskConfig.transactionConcerns.join('、') || '未设置'}
-
-请根据以上设定扮演一位真实的客户，与销售顾问进行自然对话。
-${taskConfig.trainingFocus.length > 0 ? `
-特别注意：
-${taskConfig.trainingFocus.includes('沟通维度') ? '- 根据你的沟通方式特点进行对话，测试销售顾问的沟通适应能力\n' : ''}${taskConfig.trainingFocus.includes('本品维度') ? '- 重点询问产品相关问题，测试销售顾问的产品知识和优势展示能力\n' : ''}${taskConfig.trainingFocus.includes('竞品维度') ? '- 主动提及竞品对比，测试销售顾问的竞品分析和差异化说明能力\n' : ''}${taskConfig.trainingFocus.includes('客户信息获取维度') ? '- 适度隐藏个人信息，测试销售顾问的信息挖掘和需求识别能力\n' : ''}` : ''}
-      `;
+      console.error('生成Prompt失败:', error);
+      // 使用备选方案
+      const prompt = `基于当前配置生成的AI客户角色Prompt...`;
       setGeneratedPrompt(prompt);
     }
   };
 
   const randomSelectAll = () => {
-    // 随机选择所有配置项 - 确保与左侧选项完全一致
-    const taskGoals = ['小米SU7竞品对比', '991-2产品介绍', '客户需求挖掘', '金融方案销售', '试驾邀约'];
-    const methodologies = ['FAB产品介绍技巧', 'RACE竞品对比介绍', 'SPIN销售法', '顾问式销售'];
-    const personalities = ['独立', '犹豫', '理性', '强势', '相信朋友', '数据导向', '主导权', '隐藏需求', '喜欢案例', '积极表达', '易信网络', '服从权威'];
-    const professions = ['金融分析', '网络直播', '冲压工厂', '电子配件生产', '医生', '律师', '教师', '工程师'];
-    const communications = ['D控制型', 'I影响型', 'C遵循型', 'S稳定型'];
-    const hobbies = ['高尔夫', '旅游', '乒乓球', '网球', '阅读', '音乐', '摄影', '健身'];
-    const genders = ['男', '女'];
-    const ages = ['20-30', '30-40', '40-50', '50-60'];
-    const currentVehicles = ['无', 'G2-1', 'E2-1', '991-2'];
-    const interestedVehicles = ['G3-1', '982-Boxster', 'E3-1', 'Taycan J2'];
-    const focuses = ['外观', '动力', '内饰', '智能化', '充电', '残值'];
-    const competitorCurrents = ['BMW X5', 'AUDI A7', 'Benz S480', 'Volvo S80'];
-    const competitorInteresteds = ['SU 7', '理想L9', 'Benz GLS'];
-    const negotiationStages = ['产品介绍', '试乘试驾', '交易洽谈'];
-    const transactionConcerns = ['价格优惠', '赠送附件', '按揭优惠', '服务体验', '价格对比'];
-
     // 随机选择函数
     const randomChoice = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
-    const randomChoices = (arr: string[], count: number = Math.floor(Math.random() * 3) + 1) => {
+    const randomChoices = (arr: string[], count: number) => {
       const shuffled = [...arr].sort(() => 0.5 - Math.random());
-      return shuffled.slice(0, count);
+      return shuffled.slice(0, Math.min(count, arr.length));
     };
 
+    // 所有选项数组
+    const taskGoals = ['991-2产品介绍', '小米SU7竞品对比', '客户需求挖掘', '金融方案销售', '试驾邀约'];
+    const methodologies = ['FAB产品介绍技巧', 'RACE竞品对比介绍', 'SPIN销售法', '顾问式销售'];
+    const personalities = ['强势', '主导权', '独立', '积极表达', '相信朋友', '喜欢案例', '服从权威', '数据导向', '理性', '犹豫', '隐藏需求'];
+    const professions = ['企业家', '医生', '律师', '工程师', '金融分析师', '设计师', '教授', '咨询师'];
+    const communications = ['D控制型', 'I影响型', 'S稳定型', 'C遵循型'];
+    const hobbies = ['高尔夫', '网球', '滑雪', '摄影', '旅行', '音乐', '艺术收藏', '红酒品鉴'];
+    const genders = ['男', '女'];
+    const ages = ['25-35', '35-45', '45-55', '55-65'];
+    const currentVehicles = ['宝马X5', '奥迪Q7', '奔驰GLE', '雷克萨斯RX', '沃尔沃XC90'];
+    const interestedVehicles = ['Cayenne', 'Macan', 'Panamera', '911', 'Taycan'];
+    const focuses = ['动力性能', '豪华配置', '科技功能', '安全性', '舒适性', '操控性', '品牌价值'];
+    const competitorCurrents = ['宝马i4', '奔驰EQE', '奥迪e-tron GT', '特斯拉Model S'];
+    const competitorInteresteds = ['小米SU7', '理想L9', '蔚来ET7', '比亚迪汉EV'];
+    const negotiationStages = ['初次接触', '需求了解', '产品介绍', '试驾体验', '价格谈判', '成交准备'];
+    const transactionConcerns = ['价格', '保值率', '维修成本', '保险费用', '充电便利性', '品牌认知'];
     const trainingFocuses = ['沟通维度', '本品维度', '竞品维度', '客户信息获取维度'];
 
     // 智能选择：避免冲突的配置组合
@@ -465,7 +440,6 @@ ${taskConfig.trainingFocus.includes('沟通维度') ? '- 根据你的沟通方�
     });
   };
 
-
   const updateConfig = (key: string, value: any) => {
     setTaskConfig(prev => ({ ...prev, [key]: value }));
   };
@@ -479,56 +453,84 @@ ${taskConfig.trainingFocus.includes('沟通维度') ? '- 根据你的沟通方�
     }));
   };
 
+  const startPractice = () => {
+    if (!generatedPrompt) {
+      alert('请先生成AI角色Prompt');
+      return;
+    }
+    
+    // 编码配置和prompt参数
+    const configParam = encodeURIComponent(JSON.stringify(taskConfig));
+    const promptParam = encodeURIComponent(generatedPrompt);
+    
+    // 跳转到练习对话页面
+    window.location.href = `/practice-chat?config=${configParam}&prompt=${promptParam}`;
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <Link href="/" className="text-2xl font-bold text-gray-900 hover:text-blue-600">
-                AI Mentor工具
-              </Link>
-              <span className="ml-2 text-sm text-gray-500">任务生成界面</span>
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                <span className="text-white text-sm font-bold">AI</span>
+              </div>
+              <div>
+                <Link href="/" className="text-xl font-bold gradient-text hover:opacity-80 transition-opacity">
+                  AI Mentor工具
+                </Link>
+                <span className="text-xs text-muted-foreground block">任务生成界面</span>
+              </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <Link href="/practice-chat" className="text-sm text-gray-600 hover:text-blue-600">
+            <div className="flex items-center space-x-6">
+              <Link href="/practice-chat" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                 学员对话
               </Link>
-              <Link href="/dashboard" className="text-sm text-gray-600 hover:text-blue-600">
+              <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                 数据面板
               </Link>
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+              <Link href="/mentor-evaluation" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                导师评估
+              </Link>
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm font-medium">M</span>
               </div>
             </div>
           </div>
         </div>
-      </header>
+      </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-gray-900">任务生成界面</h2>
-            <div className="flex space-x-3">
-              {/* 保时捷十大客户画像下拉选择 */}
+      <main className="pt-20 pb-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto space-y-8">
+          {/* Header */}
+          <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all duration-1000 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">任务生成界面</h1>
+              <p className="text-gray-600">通过智能配置生成个性化的AI客户角色和销售场景</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* 客户画像选择 */}
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setShowRandomOptions(!showRandomOptions)}
-                  className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 flex items-center"
+                  className="btn-secondary inline-flex items-center group"
                 >
-                  <span className="mr-1">🎭</span>
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
                   选择客户画像
-                  <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 ml-2 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
                 
                 {showRandomOptions && (
-                  <div className="absolute top-full left-0 mt-1 w-80 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-96 overflow-y-auto">
-                    <div className="p-2">
-                      <div className="text-sm text-gray-600 p-2 border-b">
+                  <div className="absolute top-full left-0 mt-2 w-80 card-glass border border-white/20 rounded-xl shadow-xl z-50 max-h-96 overflow-y-auto">
+                    <div className="p-4">
+                      <div className="text-sm text-gray-600 p-3 border-b border-gray-200 mb-3">
                         选择一个保时捷客户画像模板，系统将自动填充相应配置
                       </div>
                       {customerTypes.map((type, index) => (
@@ -549,7 +551,7 @@ ${taskConfig.trainingFocus.includes('沟通维度') ? '- 根据你的沟通方�
                             }));
                             setShowRandomOptions(false);
                           }}
-                          className="w-full text-left p-3 hover:bg-purple-50 border-b border-gray-100 last:border-b-0"
+                          className="w-full text-left p-3 hover:bg-gray-50 rounded-lg border-b border-gray-100 last:border-b-0 transition-colors"
                         >
                           <div className="font-medium text-gray-900 mb-1">{type.name}</div>
                           <div className="text-sm text-gray-600 mb-2">{type.description}</div>
@@ -571,389 +573,307 @@ ${taskConfig.trainingFocus.includes('沟通维度') ? '- 根据你的沟通方�
                 )}
               </div>
               
-              <button 
+              <button
                 onClick={randomSelectAll}
-                className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 flex items-center"
+                className="btn-secondary inline-flex items-center group"
               >
-                <span className="mr-1">🎲</span>
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
                 完全随机
               </button>
               
-              <button 
+              <button
                 onClick={generatePrompt}
-                className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
+                className="btn-primary inline-flex items-center group"
               >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
                 生成AI角色Prompt
               </button>
             </div>
           </div>
 
+          {/* Conflict Warnings */}
+          {conflictWarnings.length > 0 && (
+            <div className={`card-glass p-4 border-l-4 border-yellow-400 bg-yellow-50 transition-all duration-500 ${isLoaded ? 'animate-fade-in' : ''}`} style={{animationDelay: '0.1s'}}>
+              <div className="flex items-center mb-2">
+                <svg className="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <h3 className="text-sm font-medium text-yellow-800">配置冲突提醒</h3>
+              </div>
+              <ul className="text-sm text-yellow-700 space-y-1">
+                {conflictWarnings.map((warning, index) => (
+                  <li key={index} className="flex items-start">
+                    <span className="w-1.5 h-1.5 bg-yellow-600 rounded-full mt-2 mr-2 flex-shrink-0"></span>
+                    {warning}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* 配置面板 */}
+            {/* Configuration Panel */}
             <div className="space-y-6">
-              {/* 任务目标 */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">任务目标</h3>
-                <select 
+              {/* Task Goal */}
+              <div className={`card-glass p-6 transition-all duration-500 ${isLoaded ? 'animate-fade-in' : ''}`} style={{animationDelay: '0.2s'}}>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                  任务目标
+                </h3>
+                <select
                   value={taskConfig.taskGoal}
                   onChange={(e) => updateConfig('taskGoal', e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="input w-full"
                 >
                   <option value="">请选择任务目标</option>
-                  <option value="小米SU7竞品对比">小米SU7竞品对比</option>
                   <option value="991-2产品介绍">991-2产品介绍</option>
+                  <option value="小米SU7竞品对比">小米SU7竞品对比</option>
                   <option value="客户需求挖掘">客户需求挖掘</option>
                   <option value="金融方案销售">金融方案销售</option>
                   <option value="试驾邀约">试驾邀约</option>
                 </select>
               </div>
 
-              {/* 方法论 */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">方法论</h3>
-                <select 
+              {/* Methodology */}
+              <div className={`card-glass p-6 transition-all duration-500 ${isLoaded ? 'animate-fade-in' : ''}`} style={{animationDelay: '0.3s'}}>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                  销售方法论
+                </h3>
+                <select
                   value={taskConfig.methodology}
                   onChange={(e) => updateConfig('methodology', e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="input w-full"
                 >
-                  <option value="">请选择方法论</option>
-                  {['FAB产品介绍技巧', 'RACE竞品对比介绍', 'SPIN销售法', '顾问式销售'].map(method => (
-                    <option 
-                      key={method} 
-                      value={method}
-                      disabled={getDisabledOptions('methodology', method)}
-                      className={getDisabledOptions('methodology', method) ? 'text-gray-400' : ''}
-                    >
-                      {method}
-                    </option>
-                  ))}
+                  <option value="">请选择销售方法论</option>
+                  <option value="FAB产品介绍技巧" disabled={getDisabledOptions('methodology', 'FAB产品介绍技巧')}>
+                    FAB产品介绍技巧
+                  </option>
+                  <option value="RACE竞品对比介绍" disabled={getDisabledOptions('methodology', 'RACE竞品对比介绍')}>
+                    RACE竞品对比介绍
+                  </option>
+                  <option value="SPIN销售法" disabled={getDisabledOptions('methodology', 'SPIN销售法')}>
+                    SPIN销售法
+                  </option>
+                  <option value="顾问式销售" disabled={getDisabledOptions('methodology', '顾问式销售')}>
+                    顾问式销售
+                  </option>
                 </select>
               </div>
 
-              {/* 训练重点选择 */}
-              <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
-                <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                  <span className="mr-2">🎯</span>
-                  训练重点维度
+              {/* Customer Information */}
+              <div className={`card-glass p-6 transition-all duration-500 ${isLoaded ? 'animate-fade-in' : ''}`} style={{animationDelay: '0.4s'}}>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full mr-2"></div>
+                  客户信息
                 </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { key: '沟通维度', desc: '沟通方式识别、匹配、引导能力' },
-                    { key: '本品维度', desc: '产品知识、优势展示、需求匹配' },
-                    { key: '竞品维度', desc: '竞品分析、差异化对比能力' },
-                    { key: '客户信息获取维度', desc: '信息挖掘、性格识别能力' }
-                  ].map(focus => (
-                    <label key={focus.key} className="flex items-start p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={taskConfig.trainingFocus.includes(focus.key)}
-                        onChange={() => toggleArrayValue('trainingFocus', focus.key)}
-                        className="mr-3 mt-1"
-                      />
-                      <div>
-                        <span className="text-sm font-medium text-gray-900">{focus.key}</span>
-                        <p className="text-xs text-gray-500 mt-1">{focus.desc}</p>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-
-              {/* 冲突警告 */}
-              {conflictWarnings.length > 0 && (
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
-                  <div className="flex">
-                    <div className="flex-shrink-0">
-                      <span className="text-yellow-400">⚠️</span>
-                    </div>
-                    <div className="ml-3">
-                      <h3 className="text-sm font-medium text-yellow-800">配置建议</h3>
-                      <div className="mt-2 text-sm text-yellow-700">
-                        <ul className="list-disc list-inside space-y-1">
-                          {conflictWarnings.map((warning, index) => (
-                            <li key={index}>{warning}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* 客户维度 */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">客户维度</h3>
                 <div className="space-y-4">
-                  {/* 客户性格 */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">客户性格</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {['独立', '犹豫', '理性', '强势', '相信朋友', '数据导向', '主导权', '隐藏需求', '喜欢案例', '积极表达', '易信网络', '服从权威'].map(trait => (
-                        <label key={trait} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={taskConfig.customerPersonality.includes(trait)}
-                            onChange={() => toggleArrayValue('customerPersonality', trait)}
-                            className="mr-2"
-                          />
-                          <span className="text-sm">{trait}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* 客户职业 */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">客户职业</label>
-                    <select 
-                      value={taskConfig.customerProfession}
-                      onChange={(e) => updateConfig('customerProfession', e.target.value)}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2"
-                    >
-                      <option value="">请选择职业</option>
-                      <option value="金融分析">金融分析</option>
-                      <option value="网络直播">网络直播</option>
-                      <option value="冲压工厂">冲压工厂</option>
-                      <option value="电子配件生产">电子配件生产</option>
-                      <option value="医生">医生</option>
-                      <option value="律师">律师</option>
-                      <option value="教师">教师</option>
-                      <option value="工程师">工程师</option>
-                    </select>
-                  </div>
-
-                  {/* 客户沟通方式 */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">客户沟通方式</label>
-                    <select 
-                      value={taskConfig.customerCommunication}
-                      onChange={(e) => updateConfig('customerCommunication', e.target.value)}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2"
-                    >
-                      <option value="">请选择沟通方式</option>
-                      <option value="D控制型">D控制型</option>
-                      <option value="I影响型">I影响型</option>
-                      <option value="C遵循型">C遵循型</option>
-                      <option value="S稳定型">S稳定型</option>
-                    </select>
-                  </div>
-
-                  {/* 客户爱好 */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">客户爱好</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {['高尔夫', '旅游', '乒乓球', '网球', '阅读', '音乐', '摄影', '健身'].map(hobby => (
-                        <label key={hobby} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={taskConfig.customerHobbies.includes(hobby)}
-                            onChange={() => toggleArrayValue('customerHobbies', hobby)}
-                            className="mr-2"
-                          />
-                          <span className="text-sm">{hobby}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* 客户性别和年龄 */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">客户性别</label>
-                      <select 
+                      <label className="block text-sm font-medium text-gray-700 mb-2">职业</label>
+                      <select
+                        value={taskConfig.customerProfession}
+                        onChange={(e) => updateConfig('customerProfession', e.target.value)}
+                        className="input w-full"
+                      >
+                        <option value="">请选择职业</option>
+                        <option value="企业家">企业家</option>
+                        <option value="医生">医生</option>
+                        <option value="律师">律师</option>
+                        <option value="工程师">工程师</option>
+                        <option value="金融分析师">金融分析师</option>
+                        <option value="设计师">设计师</option>
+                        <option value="教授">教授</option>
+                        <option value="咨询师">咨询师</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">沟通方式</label>
+                      <select
+                        value={taskConfig.customerCommunication}
+                        onChange={(e) => updateConfig('customerCommunication', e.target.value)}
+                        className="input w-full"
+                      >
+                        <option value="">请选择沟通方式</option>
+                        <option value="D控制型">D控制型</option>
+                        <option value="I影响型">I影响型</option>
+                        <option value="S稳定型">S稳定型</option>
+                        <option value="C遵循型">C遵循型</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">性别</label>
+                      <select
                         value={taskConfig.customerGender}
                         onChange={(e) => updateConfig('customerGender', e.target.value)}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2"
+                        className="input w-full"
                       >
-                        <option value="">请选择</option>
+                        <option value="">请选择性别</option>
                         <option value="男">男</option>
                         <option value="女">女</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">客户年龄</label>
-                      <select 
+                      <label className="block text-sm font-medium text-gray-700 mb-2">年龄</label>
+                      <select
                         value={taskConfig.customerAge}
                         onChange={(e) => updateConfig('customerAge', e.target.value)}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2"
+                        className="input w-full"
                       >
-                        <option value="">请选择</option>
-                        <option value="20-30">20-30</option>
-                        <option value="30-40">30-40</option>
-                        <option value="40-50">40-50</option>
-                        <option value="50-60">50-60</option>
+                        <option value="">请选择年龄</option>
+                        <option value="25-35">25-35</option>
+                        <option value="35-45">35-45</option>
+                        <option value="45-55">45-55</option>
+                        <option value="55-65">55-65</option>
                       </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">性格特征</label>
+                    <div className="flex flex-wrap gap-2">
+                      {['强势', '主导权', '独立', '积极表达', '相信朋友', '喜欢案例', '服从权威', '数据导向', '理性', '犹豫', '隐藏需求'].map(trait => (
+                        <button
+                          key={trait}
+                          onClick={() => toggleArrayValue('customerPersonality', trait)}
+                          className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                            taskConfig.customerPersonality.includes(trait)
+                              ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                              : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
+                          }`}
+                        >
+                          {trait}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* 本品维度 */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">本品维度</h3>
+              {/* Vehicle Information */}
+              <div className={`card-glass p-6 transition-all duration-500 ${isLoaded ? 'animate-fade-in' : ''}`} style={{animationDelay: '0.5s'}}>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
+                  车辆信息
+                </h3>
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">现驾车型</label>
-                      <select 
+                      <select
                         value={taskConfig.currentVehicle}
                         onChange={(e) => updateConfig('currentVehicle', e.target.value)}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2"
+                        className="input w-full"
                       >
-                        <option value="">请选择</option>
-                        <option value="无">无</option>
-                        <option value="G2-1">G2-1</option>
-                        <option value="E2-1">E2-1</option>
-                        <option value="991-2">991-2</option>
+                        <option value="">请选择现驾车型</option>
+                        <option value="宝马X5">宝马X5</option>
+                        <option value="奥迪Q7">奥迪Q7</option>
+                        <option value="奔驰GLE">奔驰GLE</option>
+                        <option value="雷克萨斯RX">雷克萨斯RX</option>
+                        <option value="沃尔沃XC90">沃尔沃XC90</option>
                       </select>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">意向车型</label>
-                      <select 
+                      <select
                         value={taskConfig.interestedVehicle}
                         onChange={(e) => updateConfig('interestedVehicle', e.target.value)}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2"
+                        className="input w-full"
                       >
-                        <option value="">请选择</option>
-                        <option value="G3-1">G3-1</option>
-                        <option value="982-Boxster">982-Boxster</option>
-                        <option value="E3-1">E3-1</option>
-                        <option value="Taycan J2">Taycan J2</option>
+                        <option value="">请选择意向车型</option>
+                        <option value="Cayenne" disabled={getDisabledOptions('interestedVehicle', 'Cayenne')}>Cayenne</option>
+                        <option value="Macan" disabled={getDisabledOptions('interestedVehicle', 'Macan')}>Macan</option>
+                        <option value="Panamera" disabled={getDisabledOptions('interestedVehicle', 'Panamera')}>Panamera</option>
+                        <option value="911" disabled={getDisabledOptions('interestedVehicle', '911')}>911</option>
+                        <option value="Taycan" disabled={getDisabledOptions('interestedVehicle', 'Taycan')}>Taycan</option>
                       </select>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">客户关注点</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {['外观', '动力', '内饰', '智能化', '充电', '残值'].map(focus => (
-                        <label key={focus} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={taskConfig.customerFocus.includes(focus)}
-                            onChange={() => toggleArrayValue('customerFocus', focus)}
-                            className="mr-2"
-                          />
-                          <span className="text-sm">{focus}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 竞品维度 */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">竞品维度</h3>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">现驾车型</label>
-                      <select 
-                        value={taskConfig.competitorCurrent}
-                        onChange={(e) => updateConfig('competitorCurrent', e.target.value)}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2"
-                      >
-                        <option value="">请选择</option>
-                        <option value="BMW X5">BMW X5</option>
-                        <option value="AUDI A7">AUDI A7</option>
-                        <option value="Benz S480">Benz S480</option>
-                        <option value="Volvo S80">Volvo S80</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">意向车型</label>
-                      <select 
-                        value={taskConfig.competitorInterested}
-                        onChange={(e) => updateConfig('competitorInterested', e.target.value)}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2"
-                      >
-                        <option value="">请选择</option>
-                        <option value="SU 7">SU 7</option>
-                        <option value="理想L9">理想L9</option>
-                        <option value="Benz GLS">Benz GLS</option>
-                      </select>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">竞品关注点</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {['外观', '动力', '内饰', '智能化', '充电', '残值'].map(focus => (
-                        <label key={focus} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={taskConfig.competitorFocus.includes(focus)}
-                            onChange={() => toggleArrayValue('competitorFocus', focus)}
-                            className="mr-2"
-                          />
-                          <span className="text-sm">{focus}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 交易相关 */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">交易相关</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">洽谈环节</label>
-                    <select 
-                      value={taskConfig.negotiationStage}
-                      onChange={(e) => updateConfig('negotiationStage', e.target.value)}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2"
-                    >
-                      <option value="">请选择</option>
-                      <option value="产品介绍">产品介绍</option>
-                      <option value="试乘试驾">试乘试驾</option>
-                      <option value="交易洽谈">交易洽谈</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">交易关注点</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {['价格优惠', '赠送附件', '按揭优惠', '服务体验', '价格对比'].map(concern => (
-                        <label key={concern} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={taskConfig.transactionConcerns.includes(concern)}
-                            onChange={() => toggleArrayValue('transactionConcerns', concern)}
-                            className="mr-2"
-                          />
-                          <span className="text-sm">{concern}</span>
-                        </label>
-                      ))}
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* 生成的Prompt预览 */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="mb-4">
-                <h3 className="text-lg font-medium text-gray-900">生成的AI角色Prompt</h3>
+            {/* Generated Prompt Panel */}
+            <div className="space-y-6">
+              <div className={`card-glass p-6 transition-all duration-500 ${isLoaded ? 'animate-fade-in' : ''}`} style={{animationDelay: '0.6s'}}>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                    <div className="w-2 h-2 bg-pink-500 rounded-full mr-2"></div>
+                    生成的AI角色Prompt
+                  </h3>
+                  {generatedPrompt && (
+                    <button
+                      onClick={startPractice}
+                      className="btn-primary inline-flex items-center text-sm"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h1m4 0h1m-6 4h1m4 0h1M9 6h6" />
+                      </svg>
+                      开始练习
+                    </button>
+                  )}
+                </div>
+                
+                {generatedPrompt ? (
+                  <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
+                    <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
+                      {generatedPrompt}
+                    </pre>
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 rounded-lg p-8 text-center">
+                    <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    <p className="text-gray-500 text-sm">
+                      请配置任务参数，然后点击"生成AI角色Prompt"按钮
+                    </p>
+                  </div>
+                )}
               </div>
-              <div className="bg-gray-50 rounded-md p-4 h-96 overflow-y-auto">
-                <pre className="text-sm text-gray-700 whitespace-pre-wrap">
-                  {generatedPrompt || '点击"生成AI角色Prompt"按钮来生成角色设定...'}
-                </pre>
-              </div>
-              <div className="mt-4 flex space-x-2">
-                <button className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
-                  保存模板
-                </button>
-                <Link 
-                  href={`/practice-chat${generatedPrompt ? `?config=${encodeURIComponent(JSON.stringify(taskConfig))}&prompt=${encodeURIComponent(generatedPrompt)}` : ''}`}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 inline-block text-center"
-                >
-                  发送邮件至邮箱
-                </Link>
+
+              {/* Quick Actions */}
+              <div className={`card-glass p-6 transition-all duration-500 ${isLoaded ? 'animate-fade-in' : ''}`} style={{animationDelay: '0.7s'}}>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <div className="w-2 h-2 bg-indigo-500 rounded-full mr-2"></div>
+                  快速操作
+                </h3>
+                <div className="space-y-3">
+                  <Link
+                    href="/practice-chat"
+                    className="btn-secondary w-full inline-flex items-center justify-center"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    直接进入对话练习
+                  </Link>
+                  <Link
+                    href="/dashboard"
+                    className="btn-secondary w-full inline-flex items-center justify-center"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    查看数据面板
+                  </Link>
+                  <Link
+                    href="/mentor-evaluation"
+                    className="btn-secondary w-full inline-flex items-center justify-center"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    导师评估界面
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
