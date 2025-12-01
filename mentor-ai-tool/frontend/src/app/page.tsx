@@ -48,7 +48,7 @@ export default function Home() {
               <span className="gradient-text block sm:inline"> AI Mentor工具</span>
             </h1>
             <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto text-pretty">
-              为保时捷销售团队提供专业的AI驱动培训平台，通过智能化的角色扮演和实时评估，提升销售技能和客户服务水平
+              为销售团队提供专业的AI驱动培训平台，通过智能化的角色扮演和实时评估，提升销售技能和客户服务水平
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/task-generator" className="btn-primary inline-flex items-center justify-center group">
@@ -231,7 +231,7 @@ export default function Home() {
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">系统特色</h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              基于先进AI技术，为保时捷销售团队提供全方位的智能化培训解决方案
+              基于先进AI技术，为销售团队提供全方位的智能化培训解决方案
             </p>
           </div>
           
