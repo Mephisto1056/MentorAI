@@ -26,7 +26,7 @@ export default function Home() {
               </div>
             </div>
             <div className="flex items-center space-x-6">
-              <span className="text-sm text-muted-foreground hidden sm:block">保时捷销售培训</span>
+              <span className="text-sm text-muted-foreground hidden sm:block">销售培训</span>
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm font-medium">M</span>
               </div>
