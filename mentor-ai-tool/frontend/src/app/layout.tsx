@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Mentor工具 - 保时捷销售培训平台",
+  title: "AIMentor工具 - 销售培训平台",
   description: "为保时捷销售团队提供专业的AI驱动培训平台",
 };
 
