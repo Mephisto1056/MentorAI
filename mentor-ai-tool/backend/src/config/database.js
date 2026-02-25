@@ -3,7 +3,10 @@ const logger = require('../utils/logger');
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/mentor-ai');
+    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/mentor-ai', {
+      serverSelectionTimeoutMS: 10000,
+      connectTimeoutMS: 10000,
+    });
 
     logger.info(`MongoDB Connected: ${conn.connection.host}`);
     console.log(`MongoDB Connected: ${conn.connection.host}`);
