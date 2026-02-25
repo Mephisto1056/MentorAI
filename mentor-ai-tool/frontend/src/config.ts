@@ -7,18 +7,18 @@ const getBaseUrl = (): string => {
   
   // 在浏览器环境中，自动检测当前域名和协议
   if (typeof window !== 'undefined') {
-    const protocol = window.location.protocol;
     const hostname = window.location.hostname;
-    
-    // 如果是localhost，使用6100端口
+
+    // 如果是localhost，使用6100端口（本地开发）
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      const protocol = window.location.protocol;
       return `${protocol}//localhost:6100`;
     }
-    
-    // 如果是其他域名或IP，使用相同协议和域名，但端口改为6100
-    return `${protocol}//${hostname}:6100`;
+
+    // 非localhost：前后端由同一Express托管，使用同源请求
+    return '';
   }
-  
+
   // 服务端渲染时的默认值
   return 'http://localhost:6100';
 };

@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -64,7 +65,10 @@ const io = new Server(server, {
 connectDB();
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}));
 
 // CORS configuration for external access
 const corsOptions = {
@@ -146,12 +150,18 @@ app.use('/api/analytics', authMiddleware, analyticsRoutes);
 // Socket.IO connection handling
 socketHandler(io);
 
-// Error handling middleware (must be last)
+// Serve frontend static files (built by Next.js export)
+app.use(express.static(path.join(__dirname, '../public')));
+
+// Error handling middleware (must be last for API routes)
 app.use(errorHandler);
 
-// 404 handler
+// 404 handler: API routes return JSON, other routes serve index.html (SPA fallback)
 app.use('*', (req, res) => {
-  res.status(404).json({ message: 'Route not found' });
+  if (req.originalUrl.startsWith('/api/')) {
+    return res.status(404).json({ message: 'Route not found' });
+  }
+  res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 const PORT = process.env.PORT || 6100;

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import { getApiUrl } from '../../config';
 
 interface CriteriaDetail {
@@ -55,22 +54,24 @@ interface EvaluationData {
 }
 
 export default function EvaluationResult() {
-  const searchParams = useSearchParams();
-  const sessionId = searchParams.get('sessionId');
-  
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [evaluationData, setEvaluationData] = useState<EvaluationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'ai' | 'mentor' | 'conversation'>('ai');
 
+  // 客户端读取 URL 参数
   useEffect(() => {
-    if (sessionId) {
-      fetchEvaluationData(sessionId);
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('sessionId');
+    setSessionId(id);
+    if (id) {
+      fetchEvaluationData(id);
     } else {
       setError('会话ID未提供');
       setLoading(false);
     }
-  }, [sessionId]);
+  }, []);
 
   const fetchEvaluationData = async (id: string) => {
     try {

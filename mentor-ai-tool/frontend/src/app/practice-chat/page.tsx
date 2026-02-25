@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
 import VoiceController from '../../components/VoiceController';
 import VoiceInput from '../../components/VoiceInput';
@@ -10,7 +9,9 @@ import VoicePlayer from '../../components/VoicePlayer';
 import { getApiUrl, SOCKET_CONFIG } from '../../config';
 
 export default function PracticeChat() {
-  const searchParams = useSearchParams();
+  const [searchParamsReady, setSearchParamsReady] = useState(false);
+  const [configParam, setConfigParam] = useState<string | null>(null);
+  const [promptParam, setPromptParam] = useState<string | null>(null);
   const [taskConfig, setTaskConfig] = useState<any>(null);
   const [aiPrompt, setAiPrompt] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -84,10 +85,17 @@ export default function PracticeChat() {
     };
   }, []);
 
+  // 客户端读取 URL 参数
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setConfigParam(params.get('config'));
+    setPromptParam(params.get('prompt'));
+    setSearchParamsReady(true);
+  }, []);
+
   // 从URL参数中获取配置和prompt，并创建会话
   useEffect(() => {
-    const configParam = searchParams.get('config');
-    const promptParam = searchParams.get('prompt');
+    if (!searchParamsReady) return;
     
     // 重置客户姓名，确保使用新配置生成
     setCustomerName('');
@@ -164,7 +172,7 @@ export default function PracticeChat() {
       setAiPrompt('你是一位对保时捷感兴趣的客户，请根据配置信息进行角色扮演。');
       createPracticeSession(defaultConfig, '你是一位对保时捷感兴趣的客户，请根据配置信息进行角色扮演。');
     }
-  }, [searchParams]);
+  }, [searchParamsReady, configParam, promptParam]);
 
   // 自动滚动到底部 - 只滚动对话框内部，不滚动整个页面
   useEffect(() => {
