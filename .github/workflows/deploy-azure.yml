@@ -28,21 +28,21 @@ jobs:
         run: npm run build
 
       # Assemble deployment package
-      - name: Prepare deployment package
+      - name: Copy frontend build to backend/public
         run: |
           mkdir -p mentor-ai-tool/backend/public
           cp -r mentor-ai-tool/frontend/out/* mentor-ai-tool/backend/public/
 
-      # Create ZIP (without node_modules, let Azure install)
-      - name: Create deployment ZIP
-        run: |
-          cd mentor-ai-tool/backend
-          zip -r ../../deploy.zip . -x "node_modules/*"
+      # Install backend dependencies
+      - name: Install backend production dependencies
+        working-directory: mentor-ai-tool/backend
+        run: npm ci --omit=dev
 
       # Deploy to Azure
       - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
+        uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: deploy.zip
+          package: mentor-ai-tool/backend
+          startup-command: 'node src/app.js'
