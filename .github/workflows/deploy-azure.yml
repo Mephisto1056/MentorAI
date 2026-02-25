@@ -38,11 +38,24 @@ jobs:
         working-directory: mentor-ai-tool/backend
         run: npm ci --omit=dev
 
-      # Deploy to Azure
+      # Create ZIP
+      - name: Create deployment ZIP
+        run: |
+          cd mentor-ai-tool/backend
+          zip -r ../../deploy.zip .
+
+      # Deploy via Kudu ZIP deploy API
       - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: mentor-ai-tool/backend
-          startup-command: 'node src/app.js'
+        env:
+          PUBLISH_PROFILE: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          APP_NAME: ${{ secrets.AZURE_WEBAPP_NAME }}
+        run: |
+          USERNAME=$(echo "$PUBLISH_PROFILE" | grep -oP 'userName="\K[^"]+' | head -1)
+          PASSWORD=$(echo "$PUBLISH_PROFILE" | grep -oP 'userPWD="\K[^"]+' | head -1)
+          echo "Deploying to ${APP_NAME}..."
+          curl -X POST \
+            "https://${APP_NAME}.scm.azurewebsites.net/api/zipdeploy" \
+            -u "${USERNAME}:${PASSWORD}" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary @deploy.zip \
+            --fail -w "\nHTTP Status: %{http_code}\n"
