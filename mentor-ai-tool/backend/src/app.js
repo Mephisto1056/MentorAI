@@ -29,28 +29,31 @@ const { authMiddleware } = require('./middleware/auth');
 const socketHandler = require('./services/socketService');
 
 const app = express();
+app.set('trust proxy', 1);
 const server = createServer(app);
 // Socket.IO CORS configuration for external access
 const socketCorsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin
     if (!origin) return callback(null, true);
-    
+
+    // Allow Azure same-origin
+    if (typeof origin === 'string' && origin.includes('azurewebsites.net')) {
+      return callback(null, true);
+    }
+
     // Get allowed origins from environment variable or use defaults
-    const allowedOrigins = process.env.FRONTEND_URL 
+    const allowedOrigins = process.env.FRONTEND_URL
       ? process.env.FRONTEND_URL.split(',')
       : ["http://localhost:3000"];
-    
+
     // Check if the origin is in the allowed list
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
+    } else if (origin.includes('localhost')) {
+      callback(null, true);
     } else {
-      // For development, allow any localhost origin
-      if (process.env.NODE_ENV !== 'production' && origin.includes('localhost')) {
-        callback(null, true);
-      } else {
-        callback(null, false);
-      }
+      callback(null, false);
     }
   },
   methods: ["GET", "POST"],
@@ -75,31 +78,27 @@ const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
+
     // Get allowed origins from environment variable or use defaults
-    const allowedOrigins = process.env.FRONTEND_URL 
+    const allowedOrigins = process.env.FRONTEND_URL
       ? process.env.FRONTEND_URL.split(',')
       : ["http://localhost:3000"];
-    
+
+    // Allow same-origin requests (frontend and backend on same domain, e.g. Azure)
+    if (typeof origin === 'string' && origin.includes('azurewebsites.net')) {
+      return callback(null, true);
+    }
+
     // Check if the origin is in the allowed list
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       // For development, allow any localhost origin
-      if (process.env.NODE_ENV !== 'production' && origin.includes('localhost')) {
+      if (origin.includes('localhost')) {
         callback(null, true);
       } else {
-        // For production, allow same IP with different ports (3000 and 6100)
-        const originUrl = new URL(origin);
-        const allowedUrl = new URL(process.env.FRONTEND_URL || 'http://localhost:3000');
-        
-        if (originUrl.hostname === allowedUrl.hostname && 
-            (originUrl.port === '3000' || originUrl.port === '6100')) {
-          callback(null, true);
-        } else {
-          console.log(`CORS blocked origin: ${origin}, allowed: ${process.env.FRONTEND_URL}`);
-          callback(new Error('Not allowed by CORS'));
-        }
+        console.log(`CORS blocked origin: ${origin}, allowed: ${process.env.FRONTEND_URL}`);
+        callback(new Error('Not allowed by CORS'));
       }
     }
   },
